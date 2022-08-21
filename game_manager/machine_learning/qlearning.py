@@ -4,28 +4,58 @@ import numpy as np
 import copy
 import torch
 
+################################################
+################################################
+# 優先順位つき経験学習クラス
+################################################
+################################################
 class PRIORITIZED_EXPERIENCE_REPLAY():
+    ####################################
+    # 初期化
+    ####################################
     def __init__(self,N ,alpha=0.7,beta=0.5,gamma=0.99,mode="rank"):
+        # replay_memory_size の queue を作成。deque で maxlen 指定して自動的にあふれると削除
         self.replay_priority_queue = deque(maxlen=N)
+        # index は 1 から順に番号
         self.replay_index = [i for i in range(N)]
+        # weights は全部1
         self.weights = [1 for i in range(N)]
+        #
         self.alpha = alpha
+        #
         self.beta = beta
+        #
         self.mode = mode
+        #
         self.gamma = gamma
+
+
+    ####################################
+    # 優先順位キューを埋める
+    # memoryが埋まるまでは1固定、その後は最大値をいれる
+    ####################################
     def store(self):
         #print("store ..")
+        # メモリサイズが残っているなら
         if len(self.replay_priority_queue)==0:
             self.replay_priority_queue.append(1.0) 
+        # キューがない(メモリサイズがない)場合はその時の queue の最大値
         else:
             max_priority = max(self.replay_priority_queue)
             self.replay_priority_queue.append(max_priority) 
+
+    ####################################
+    # alpha をかけて正規化
+    ####################################
     def normalize(self,replay_priority):
         replay_priority = replay_priority ** self.alpha
         sum_priority = np.sum(replay_priority)
         replay_priority = replay_priority/sum_priority
         return replay_priority
     
+    ####################################
+    # 
+    ####################################
     def rank_based_priority(self,replay_priority):
         replay_priority_index = np.argsort(replay_priority)[::-1]
         for i,index in enumerate(replay_priority_index):
@@ -33,6 +63,9 @@ class PRIORITIZED_EXPERIENCE_REPLAY():
         replay_priority = self.normalize(replay_priority)
         return replay_priority
         
+    ####################################
+    # 
+    ####################################
     def sampling(self,replay_memory,batch_size):
         replay_priority = np.array(copy.copy(self.replay_priority_queue))
         replay_priority = replay_priority[:len(replay_memory)]
@@ -54,6 +87,9 @@ class PRIORITIZED_EXPERIENCE_REPLAY():
         self.weights /= max_weights
         return replay_batch,replay_batch_index
     
+    ####################################
+    # 
+    ####################################
     def update_priority(self,replay_batch_index,reward_batch,q_batch,next_q_batch):
         memo = []
         weights = []
@@ -71,11 +107,22 @@ class PRIORITIZED_EXPERIENCE_REPLAY():
         return torch.from_numpy(weights)
         
 
+################################################
+################################################
+# マルチステップ学習クラス
+################################################
+################################################
 class Multi_Step_Learning:
+    ####################################
+    # 
+    ####################################
     def __init__(self,step_num=3,gamma=0.99):
         self.step_num = step_num
         self.gamma = gamma
 
+    ####################################
+    # 
+    ####################################
     def __get_mult_step(self,episode,start_index,end_index):
         coefficient = 1.0/(self.gamma**2)
         reward = 0
@@ -86,12 +133,20 @@ class Multi_Step_Learning:
                 reward += episode[k][1]*coefficient
                 next_state =  episode[k][2]
         return reward,next_state
+
+    ####################################
+    # 
+    ####################################
     def arrange(self,episode):
         #The batch muste be [state,reward,next_state, done].
         for i in range(len(episode)):
             episode[i][1],episode[i][2] = self.__get_mult_step(episode,i,i+self.step_num)
 
         return episode
+
+    ####################################
+    # 
+    ####################################
     def get_y_batch(self,done_batch,reward_batch, next_prediction_batch):
         return torch.cat(tuple(
                         reward if done[0] 

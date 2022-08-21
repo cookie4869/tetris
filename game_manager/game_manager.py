@@ -15,6 +15,9 @@ import time
 import json
 import pprint
 
+################################
+# Option 取得
+###############################
 def get_option(game_time, mode, drop_interval, random_seed, obstacle_height, obstacle_probability, resultlogjson, train_yaml, predict_weight, user_name, ShapeListMax, BlockNumMax):
     argparser = ArgumentParser()
     argparser.add_argument('--game_time', type=int,
@@ -56,6 +59,11 @@ def get_option(game_time, mode, drop_interval, random_seed, obstacle_height, obs
 
     return argparser.parse_args()
 
+#####################################################################
+#####################################################################
+# Game Manager
+#####################################################################
+#####################################################################
 class Game_Manager(QMainWindow):
 
     # a[n] = n^2 - n + 1
@@ -65,6 +73,9 @@ class Game_Manager(QMainWindow):
     LINE_SCORE_4 = 1300
     GAMEOVER_SCORE = -500
 
+    ###############################################
+    # 初期化
+    ###############################################
     def __init__(self):
         super().__init__()
         self.isStarted = False
@@ -128,6 +139,9 @@ class Game_Manager(QMainWindow):
             
         self.initUI()
         
+    ###############################################
+    #
+    ###############################################
     def initUI(self):
         self.gridSize = 22
         self.NextShapeYOffset = 90
@@ -168,11 +182,17 @@ class Game_Manager(QMainWindow):
         self.setFixedSize(self.tboard.width() + self.sidePanel.width(),
                           self.sidePanel.height() + self.statusbar.height())
 
+    ###############################################
+    #
+    ###############################################
     def center(self):
         screen = QDesktopWidget().screenGeometry()
         size = self.geometry()
         self.move((screen.width() - size.width()) // 2, (screen.height() - size.height()) // 2)
 
+    ###############################################
+    #
+    ###############################################
     def start(self):
         if self.isPaused:
             return
@@ -184,6 +204,9 @@ class Game_Manager(QMainWindow):
         self.tboard.msg2Statusbar.emit(str(self.tboard.score))
         self.timer.start(self.speed, self)
 
+    ###############################################
+    #
+    ###############################################
     def pause(self):
         if not self.isStarted:
             return
@@ -198,6 +221,9 @@ class Game_Manager(QMainWindow):
 
         self.updateWindow()
 
+    ###############################################
+    #
+    ###############################################
     def resetfield(self):
         # self.tboard.score = 0
         self.tboard.reset_cnt += 1
@@ -206,6 +232,9 @@ class Game_Manager(QMainWindow):
         BOARD_DATA.createNewPiece()
         
 
+    ###############################################
+    #
+    ###############################################
     def reset_all_field(self):
         # reset all field for debug
         # this function is mainly for machine learning
@@ -219,11 +248,17 @@ class Game_Manager(QMainWindow):
         BOARD_DATA.clear()
         BOARD_DATA.createNewPiece()
 
+    ###############################################
+    #
+    ###############################################
     def updateWindow(self):
         self.tboard.updateData()
         self.sidePanel.updateData()
         self.update()
 
+    ###############################################
+    #
+    ###############################################
     def timerEvent(self, event):
         # callback function for user control
 
@@ -356,6 +391,9 @@ class Game_Manager(QMainWindow):
         else:
             super(Game_Manager, self).timerEvent(event)
 
+    ###############################################
+    #
+    ###############################################
     def UpdateScore(self, removedlines, dropdownlines):
         # calculate and update current score
         if removedlines == 1:
@@ -376,6 +414,9 @@ class Game_Manager(QMainWindow):
         if removedlines > 0:
             self.tboard.line_score_stat[removedlines - 1] += 1
 
+    ###############################################
+    #
+    ###############################################
     def getGameStatus(self):
         # return current Board status.
         # define status data.
@@ -538,6 +579,9 @@ class Game_Manager(QMainWindow):
 
         return status
 
+    ###############################################
+    #
+    ###############################################
     def getGameStatusJson(self):
         status = {
                   "debug_info":
@@ -633,6 +677,9 @@ class Game_Manager(QMainWindow):
         status["judge_info"]["mode"] = self.mode
         return json.dumps(status)
 
+    ###############################################
+    #
+    ###############################################
     def keyPressEvent(self, event):
         # for keyboard/gamepad control
 
@@ -671,6 +718,9 @@ class Game_Manager(QMainWindow):
         self.updateWindow()
 
 
+###############################################
+#
+###############################################
 def drawSquare(painter, x, y, val, s):
     colorTable = [0x000000, 0xCC6666, 0x66CC66, 0x6666CC,
                   0xCCCC66, 0xCC66CC, 0x66CCCC, 0xDAAA00]
@@ -696,7 +746,15 @@ def drawSquare(painter, x, y, val, s):
     painter.drawLine(x + s - 1, y + s - 1, x + s - 1, y + 1)
 
 
+###############################################
+###############################################
+# 横画面描画
+###############################################
+###############################################
 class SidePanel(QFrame):
+    ###############################################
+    # 初期化
+    ###############################################
     def __init__(self, parent, gridSize, NextShapeYOffset, NextShapeMaxAppear):
         super().__init__(parent)
         self.setFixedSize(gridSize * 5, gridSize * BOARD_DATA.height)
@@ -705,9 +763,15 @@ class SidePanel(QFrame):
         self.NextShapeYOffset = NextShapeYOffset
         self.NextShapeMaxAppear = NextShapeMaxAppear
 
+    ###############################################
+    #
+    ###############################################
     def updateData(self):
         self.update()
 
+    ###############################################
+    #
+    ###############################################
     def paintEvent(self, event):
         painter = QPainter(self)
 
@@ -728,12 +792,21 @@ class SidePanel(QFrame):
             
             val = ShapeClass.shape
             y_offset = self.NextShapeYOffset * (i - 1) #(self.NextShapeMaxAppear - i)
+            # テトリミノを配置すべき座標リストを取得していく
             for x, y in ShapeClass.getCoords(0, 0, -minY):
                 drawSquare(painter, x * self.gridSize + dx, y * self.gridSize + dy + y_offset, val, self.gridSize)
 
+#####################################################################
+#####################################################################
+# 画面ボード描画
+#####################################################################
+#####################################################################
 class Board(QFrame):
     msg2Statusbar = pyqtSignal(str)
 
+    ###############################################
+    # 初期化
+    ###############################################
     def __init__(self, parent, gridSize, game_time, random_seed, obstacle_height, obstacle_probability, ShapeListMax):
         super().__init__(parent)
         self.setFixedSize(gridSize * BOARD_DATA.width, gridSize * BOARD_DATA.height)
@@ -741,6 +814,9 @@ class Board(QFrame):
         self.game_time = game_time
         self.initBoard(random_seed, obstacle_height, obstacle_probability, ShapeListMax)
 
+    ###############################################
+    #
+    ###############################################
     def initBoard(self, random_seed_Nextshape, obstacle_height, obstacle_probability, ShapeListMax):
         self.score = 0
         self.dropdownscore = 0
@@ -754,6 +830,9 @@ class Board(QFrame):
         BOARD_DATA.init_obstacle_parameter(obstacle_height, obstacle_probability)
         BOARD_DATA.init_shape_parameter(ShapeListMax)
 
+    ###############################################
+    #
+    ###############################################
     def paintEvent(self, event):
         painter = QPainter(self)
 
@@ -774,6 +853,9 @@ class Board(QFrame):
         painter.setPen(QColor(0xCCCCCC))
         painter.drawLine(self.width(), 0, self.width(), self.height())
 
+    ###############################################
+    #
+    ###############################################
     def OutputLogData(self, isPrintLog):
         log_file_path = GAME_MANEGER.resultlogjson
         if len(log_file_path) != 0:
@@ -784,6 +866,9 @@ class Board(QFrame):
                 GameStatusJson = GAME_MANEGER.getGameStatusJson()
                 f.write(GameStatusJson)
 
+    ###############################################
+    #
+    ###############################################
     def updateData(self):
         score_str = str(self.score)
         line_str = str(self.line)
