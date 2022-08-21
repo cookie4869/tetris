@@ -1,0 +1,51 @@
+common:
+  ft_weight: outputs/2022-08-17-08-15-23/trained_model/tetris_epoch28_score179300.pt # 以前の学習結果を利用する場合のファイル 
+  log_path: tensorboard
+model:
+  name: DQN # 学習方式 (MLP DQN
+  finetune: False # 以前の学習結果を利用する  
+state:
+  dim: 4
+train:
+  optimizer: Adam #Adam or SGD
+  lr: 1.0 # 学習率
+  lr_gamma: 0.1 # SGD 用 ... Step Size 進んだ EPOCH で gammma が学習率に乗算される
+  lr_momentum: 0.99 # SGD 用 ... モーメンタム... 今までの移動とこれから動くべき移動の平均をとり振動を防ぐための関数
+  lr_step_size: 1000 # SGD 用 ... step size 学習率更新タイミングの EPOCH 数
+  num_epoch: 100000 # 試行回数
+  num_decay_epochs: 35000 # ε収束させる試行回数
+  initial_epsilon: 1.0e-3 # ε... 学習が局所解にならないように乱数で動かして最適値する。初期値 Fine Tune の場合は小さめに
+  final_epsilon: 1.0e-3 # 上記εを漸減させたときの最終値
+  batch_size: 512 # バッチサイズ　確率的勾配降下法における、全パラメータのうちランダム抽出して勾配を求めるパラメータの数
+  gamma: 0.5 # 割引率 ... t+1 の報酬をどの程度割り引いて考えるか
+  max_penalty: -1 # 正規化する場合の最小報酬
+  target_net: True
+  target_copy_intarval: 500
+  replay_memory_size: 30000
+  double_dqn: True # Dobule DQN 有効化
+  reward_clipping: True # 報酬を 1 で正規化、ただし消去報酬のみ
+  prioritized_replay: True 
+  multi_step_learning: False
+  multi_step_num: 3
+  reward_list: #These parameter are not normalized. 消去報酬の配分
+    - 0  #survival
+    - 100 #0 #1block
+    - 300 #2block
+    - 1800 #3block
+    - 5000 #4block
+    - -5000 #game over
+  reward_weight: # 形状報酬の配分
+    - 0.00005 #1 #bampiness 
+    - 0.00002 #1 #max height
+    - 0.00005 #1 #hole_num
+tetris:
+  board_height: 22
+  board_width: 10
+  score_list:
+    - 0
+    - 100
+    - 300
+    - 1800
+    - 5000
+    - -5000
+  max_tetrominoes: 200 # 1ゲーム(EPOCH)の上限テトリミノ数

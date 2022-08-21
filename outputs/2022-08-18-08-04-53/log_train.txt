@@ -1,0 +1,25 @@
+start...
+Epoch: 1 / 100000, Score: -5000,  block: 19,  Reward: -1.1 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 2 / 100000, Score: -5000,  block: 25,  Reward: -1.1 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 3 / 100000, Score: -5000,  block: 18,  Reward: -1.1 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 4 / 100000, Score: -5000,  block: 14,  Reward: -1.0 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 5 / 100000, Score: -5000,  block: 14,  Reward: -1.0 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 6 / 100000, Score: -5000,  block: 14,  Reward: -1.0 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 7 / 100000, Score: -5000,  block: 17,  Reward: -1.0 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 8 / 100000, Score: -5000,  block: 18,  Reward: -1.1 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 9 / 100000, Score: -5000,  block: 21,  Reward: -1.1 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 10 / 100000, Score: -5000,  block: 19,  Reward: -1.1 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 11 / 100000, Score: -5000,  block: 20,  Reward: -1.1 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 12 / 100000, Score: -5000,  block: 17,  Reward: -1.0 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 13 / 100000, Score: -5000,  block: 13,  Reward: -1.0 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 14 / 100000, Score: -5000,  block: 21,  Reward: -1.1 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 15 / 100000, Score: -5000,  block: 13,  Reward: -1.0 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 16 / 100000, Score: -5000,  block: 18,  Reward: -1.1 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 17 / 100000, Score: -5000,  block: 23,  Reward: -1.1 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 18 / 100000, Score: -5000,  block: 15,  Reward: -1.0 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 19 / 100000, Score: -5000,  block: 20,  Reward: -1.1 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 20 / 100000, Score: -5000,  block: 17,  Reward: -1.1 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 21 / 100000, Score: -5000,  block: 15,  Reward: -1.0 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 22 / 100000, Score: -5000,  block: 17,  Reward: -1.1 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 23 / 100000, Score: -5000,  block: 14,  Reward: -1.0 Cleared lines: 0, col: 0/0/0/0 
+Epoch: 24 / 100000, Score: -5000,  block: 18,  Reward: -1.1 Cleared lines: 0, col: 0/0/0/0 

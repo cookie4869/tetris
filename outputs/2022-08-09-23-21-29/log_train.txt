@@ -1,0 +1,19 @@
+start...
+Epoch: 1 / 5000, Score: -5000,  block: 21,  Reward: -1.1 Cleared lines: 0
+Epoch: 2 / 5000, Score: -5000,  block: 24,  Reward: -1.1 Cleared lines: 0
+Epoch: 3 / 5000, Score: -5000,  block: 22,  Reward: -1.1 Cleared lines: 0
+Epoch: 4 / 5000, Score: -5000,  block: 21,  Reward: -1.1 Cleared lines: 0
+Epoch: 5 / 5000, Score: -5000,  block: 23,  Reward: -1.1 Cleared lines: 0
+Epoch: 6 / 5000, Score: -5000,  block: 18,  Reward: -1.1 Cleared lines: 0
+Epoch: 7 / 5000, Score: -5000,  block: 19,  Reward: -1.1 Cleared lines: 0
+Epoch: 8 / 5000, Score: -5000,  block: 18,  Reward: -1.1 Cleared lines: 0
+Epoch: 9 / 5000, Score: -5000,  block: 27,  Reward: -1.1 Cleared lines: 0
+Epoch: 10 / 5000, Score: -5000,  block: 22,  Reward: -1.1 Cleared lines: 0
+Epoch: 11 / 5000, Score: -5000,  block: 21,  Reward: -1.1 Cleared lines: 0
+Epoch: 12 / 5000, Score: -5000,  block: 23,  Reward: -1.1 Cleared lines: 0
+Epoch: 13 / 5000, Score: -5000,  block: 20,  Reward: -1.1 Cleared lines: 0
+Epoch: 14 / 5000, Score: -5000,  block: 18,  Reward: -1.1 Cleared lines: 0
+Epoch: 15 / 5000, Score: -5000,  block: 25,  Reward: -1.1 Cleared lines: 0
+Epoch: 16 / 5000, Score: -5000,  block: 24,  Reward: -1.1 Cleared lines: 0
+Epoch: 17 / 5000, Score: -5000,  block: 27,  Reward: -1.1 Cleared lines: 0
+Epoch: 18 / 5000, Score: -5000,  block: 22,  Reward: -1.1 Cleared lines: 0

@@ -1,0 +1,1 @@
+outputs/2022-08-18-10-22-46/trained_model/best_weight.pt
