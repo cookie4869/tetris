@@ -10,9 +10,10 @@ class MLP(nn.Module):
         # Linear 線形変換
         # 活性化関数: ReLU = 正規化線形関数, 負の数は扱えないので注意、今回はすべて正の数なのでOK
         # 入力 input_dim, 中間層 64 固定, 層数 3
-        self.conv1 = nn.Sequential(nn.Linear(input_dim, 64), nn.ReLU(inplace=True))
-        self.conv2 = nn.Sequential(nn.Linear(64, 64), nn.ReLU(inplace=True))
-        self.conv3 = nn.Sequential(nn.Linear(64, 1))
+        self.conv1 = nn.Sequential(nn.Linear(input_dim, 256), nn.ReLU(inplace=True))
+        self.conv2 = nn.Sequential(nn.Linear(256, 256), nn.ReLU(inplace=True))
+        self.conv22 = nn.Sequential(nn.Linear(256, 256), nn.ReLU(inplace=True))
+        self.conv3 = nn.Sequential(nn.Linear(256, 1))
 
         # 重みづけ、バイアス初期化
         self._create_weights()
@@ -33,6 +34,7 @@ class MLP(nn.Module):
     def forward(self, x):
         x = self.conv1(x)
         x = self.conv2(x)
+        x = self.conv22(x)
         x = self.conv3(x)
         return x
     

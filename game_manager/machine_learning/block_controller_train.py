@@ -152,6 +152,7 @@ class Block_Controller(object):
         elif cfg["model"]["name"]=="DQN":
             #=====load Deep Q Network=====
             from machine_learning.model.deepqnet import DeepQNetwork
+            # DQN モデルインスタンス作成
             self.model = DeepQNetwork()
             # 初期状態規定
             self.initial_state = torch.FloatTensor([[[0 for i in range(10)] for j in range(22)]])
@@ -166,7 +167,9 @@ class Block_Controller(object):
             if not predict_weight=="None":
                 if os.path.exists(predict_weight):
                     print("Load {}...".format(predict_weight))
+                    # 推論インスタンス作成
                     self.model = torch.load(predict_weight)
+                    # インスタンスを推論モードに切り替え
                     self.model.eval()    
                 else:
                     print("{} is not existed!!".format(predict_weight))
@@ -182,7 +185,7 @@ class Block_Controller(object):
             # weight ファイル(以前の学習ファイル)を指定
             self.ft_weight = cfg["common"]["ft_weight"]
             if not self.ft_weight is None:
-                ## 読み込む
+                ## 読み込んでインスタンス作成
                 self.model = torch.load(self.ft_weight)
                 ## ログへ出力
                 with open(self.log,"a") as f:
@@ -200,7 +203,7 @@ class Block_Controller(object):
         # pytorch 互換性のためfloat に変換
         if not isinstance(self.lr,float):
             self.lr = float(self.lr)
-        #メモリサイズ
+        # リプレイメモリサイズ
         self.replay_memory_size = cfg["train"]["replay_memory_size"]
         self.replay_memory = deque(maxlen=self.replay_memory_size)
         # 最大 Episode サイズ = 最大テトリミノ数
@@ -332,24 +335,29 @@ class Block_Controller(object):
     def update(self):
 
         if self.mode=="train" or self.mode=="train_sample" or self.mode=="train_sample2":
+            # リセット時にスコア計算し episode memory に penalty 追加
             self.stack_replay_memory()
 
+            # リプレイメモリがいっぱいでないなら、
             if len(self.replay_memory) < self.replay_memory_size / 10:
                 print("================pass================")
                 print("iter: {} ,meory: {}/{} , score: {}, clear line: {}, block: {}, col1-4: {}/{}/{}/{} ".format(self.iter,
                 len(self.replay_memory),self.replay_memory_size / 10,self.score,self.cleared_lines
                 ,self.tetrominoes, self.cleared_col[1], self.cleared_col[2], self.cleared_col[3], self.cleared_col[4]))
+            # リプレイメモリがいっぱいなら
             else:
                 print("================update================")
                 self.epoch += 1
                 # 優先順位つき経験学習有効なら
                 if self.prioritized_replay:
                     # replay batch index 指定
-                    batch,replay_batch_index = self.PER.sampling(self.replay_memory,self.batch_size)
+                    batch, replay_batch_index = self.PER.sampling(self.replay_memory,self.batch_size)
+                # そうでないなら
                 else:
                     batch = sample(self.replay_memory, min(len(self.replay_memory),self.batch_size))
                     
 
+                # batch から各情報を引き出す
                 state_batch, reward_batch, next_state_batch, done_batch = zip(*batch)
                 state_batch = torch.stack(tuple(state for state in state_batch))
                 reward_batch = torch.from_numpy(np.array(reward_batch, dtype=np.float32)[:, None])
@@ -357,29 +365,43 @@ class Block_Controller(object):
 
                 done_batch = torch.from_numpy(np.array(done_batch)[:, None])
 
+                # Q 値の取得
                 #max_next_state_batch = torch.stack(tuple(state for state in max_next_state_batch))
                 q_values = self.model(state_batch)
                 
 
+                ###################
+                # Traget net 使う場合
                 if self.target_net:
                     if self.epoch %self.target_copy_intarval==0 and self.epoch>0:
                         print("target_net update...")
                         self.target_model = torch.load(self.best_weight)
                         #self.target_model = copy.copy(self.model)
+                    # インスタンスを推論モードに切り替え
                     self.target_model.eval()
                     #======predict Q(S_t+1 max_a Q(s_(t+1),a))======
+                    # テンソルの勾配の計算を不可
                     with torch.no_grad():
                         next_prediction_batch = self.target_model(next_state_batch)
                 else:
+                    # インスタンスを推論モードに切り替え
                     self.model.eval()
+                    # テンソルの勾配の計算を不可とする
                     with torch.no_grad():
                         next_prediction_batch = self.model(next_state_batch)
 
+                ##########################
+                # モデルの学習実施
+                ##########################
                 self.model.train()
                 
+                ##########################
+                # Multi Step lerning の場合
                 if self.multi_step_learning:
                     print("multi step learning update")
                     y_batch = self.MSL.get_y_batch(done_batch,reward_batch, next_prediction_batch)              
+
+                # Multi Step lerning でない場合
                 else:
                     y_batch = torch.cat(
                         tuple(reward if done[0] else reward + self.gamma * prediction for done ,reward, prediction in
@@ -783,22 +805,32 @@ class Block_Controller(object):
             u = random()
             # epsilon より乱数 u が小さい場合フラグをたてる
             random_action = u <= epsilon
-            
+
+            # 次の状態一覧の action と states で配列化
             next_actions, next_states = zip(*next_steps.items())
+            # next_states のテンソルを連結
             next_states = torch.stack(next_states)
                        
             if torch.cuda.is_available():
                 next_states = next_states.cuda()
         
+            ##########################
+            # モデルの学習実施
+            ##########################
             self.model.train()
+            # テンソルの勾配の計算を不可とする(Tensor.backward() を呼び出さないことが確実な場合)
             with torch.no_grad():
+                #推論を返す
                 predictions = self.model(next_states)[:, 0]
 
             # 乱数が epsilon より小さい場合は
             if random_action:
+                # index を乱数とする
                 index = randint(0, len(next_steps) - 1)
             else:
+                # index を推論の最大値とする
                 index = torch.argmax(predictions).item()
+            # 次の action states を上記の index 元に決定
             next_state = next_states[index, :]
             action = next_actions[index]
             reward = self.reward_func(curr_backboard,action,curr_shape_class)
@@ -814,7 +846,11 @@ class Block_Controller(object):
                 next2_states = torch.stack(next2_states)
                 if torch.cuda.is_available():
                     next2_states = next2_states.cuda()
+                ##########################
+                # モデルの学習実施
+                ##########################
                 self.model.train()
+                # テンソルの勾配の計算を不可とする
                 with torch.no_grad():
                     next_predictions = self.model(next2_states)[:, 0]
                 next_index = torch.argmax(next_predictions).item()
@@ -829,6 +865,7 @@ class Block_Controller(object):
                 if torch.cuda.is_available():
                     next2_states = next2_states.cuda()
                 self.target_model.train()
+                # テンソルの勾配の計算を不可とする
                 with torch.no_grad():
                     next_predictions = self.target_model(next2_states)[:, 0]
                 next_index = torch.argmax(next_predictions).item()
@@ -842,7 +879,11 @@ class Block_Controller(object):
                 next2_states = torch.stack(next2_states)
                 if torch.cuda.is_available():
                     next2_states = next2_states.cuda()
+                ##########################
+                # モデルの学習実施
+                ##########################
                 self.model.train()
+                # テンソルの勾配の計算を不可とする
                 with torch.no_grad():
                     next_predictions = self.model(next2_states)[:, 0]
 
@@ -882,6 +923,7 @@ class Block_Controller(object):
         ####################
         # 推論
         elif self.mode == "predict" or self.mode == "predict_sample":
+            #推論モードに切り替え
             self.model.eval()
             next_actions, next_states = zip(*next_steps.items())
             next_states = torch.stack(next_states)

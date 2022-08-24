@@ -1,5 +1,5 @@
 common:
-  ft_weight: outputs/2022-08-16-23-07-28/trained_model/tetris_epoch192_score176400.pt # 以前の学習結果を利用する場合のファイル 
+  ft_weight: outputs/2022-08-22-07-53-31/trained_model/tetris_epoch1375_score13900.pt # 以前の学習結果を利用する場合のファイル 
   log_path: tensorboard
 model:
   name: DQN # 学習方式 (MLP DQN
@@ -14,10 +14,10 @@ train:
   lr_step_size: 1000 # SGD 用 ... step size 学習率更新タイミングの EPOCH 数
   num_epoch: 3000 # 試行回数
   num_decay_epochs: 3500 # ε収束させる試行回数
-  initial_epsilon: 3.0e-3 # ε... 学習が局所解にならないように乱数で動かして最適値する。初期値 Fine Tune の場合は小さめに
+  initial_epsilon: 2.0e-3 # ε... 学習が局所解にならないように乱数で動かして最適値する。初期値 Fine Tune の場合は小さめに
   final_epsilon: 1.0e-3 # 上記εを漸減させたときの最終値
   batch_size: 1024 # バッチサイズ　確率的勾配降下法における、全パラメータのうちランダム抽出して勾配を求めるパラメータの数
-  gamma: 0.9 # 割引率 ... t+1 の報酬をどの程度割り引いて考えるか
+  gamma: 0.7 # 割引率 ... t+1 の報酬をどの程度割り引いて考えるか
   max_penalty: -1 # 正規化する場合の最小報酬
   target_net: True
   target_copy_intarval: 500
@@ -31,13 +31,13 @@ train:
     - 0  #survival
     - 100 #0 #1block
     - 300 #2block
-    - 1200 #3block
-    - 5400 #4block
-    - -1200 #game over
+    - 900 #3block
+    - 3000 #4block
+    - -1500 #game over
   reward_weight: # 形状報酬の配分
-    - 0.0002 #1 #bampiness 
-    - 0.0001 #1 #max height
-    - 0.0002 #1 #hole_num
+    - 0.001 #1 #bampiness 
+    - 0.001 #1 #max height
+    - 0.001 #1 #hole_num
 tetris:
   board_height: 22
   board_width: 10
@@ -45,7 +45,7 @@ tetris:
     - 0
     - 100
     - 300
-    - 1200
-    - 5400
-    - -1000
+    - 900
+    - 3000
+    - -1500
   max_tetrominoes: 3000
