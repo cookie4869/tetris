@@ -388,6 +388,7 @@ class Block_Controller(object):
                     self.model.eval()
                     # テンソルの勾配の計算を不可とする
                     with torch.no_grad():
+                        # 推論 Q値算出
                         next_prediction_batch = self.model(next_state_batch)
 
                 ##########################
@@ -631,7 +632,7 @@ class Block_Controller(object):
             x0Min, x0Max = self.getSearchXRange(CurrentShape_class, direction0)
             for x0 in range(x0Min, x0Max):
                 # get board data, as if dropdown block
-                # 画面ボードデータをコピーしてあるX座標にテトリミノを固定しその画面ボードを返す
+                # 画面ボードデータをコピーして指定X座標にテトリミノを固定しその画面ボードを返す
                 board = self.getBoard(curr_backboard, CurrentShape_class, direction0, x0)
 
                 # ボードを２次元化
@@ -658,7 +659,7 @@ class Block_Controller(object):
             x0Min, x0Max = self.getSearchXRange(CurrentShape_class, direction0)
             for x0 in range(x0Min, x0Max):
                 # get board data, as if dropdown block
-                # 画面ボードデータをコピーしてあるX座標にテトリミノを固定しその画面ボードを返す
+                # 画面ボードデータをコピーして指定X座標にテトリミノを固定しその画面ボードを返す
                 board = self.getBoard(curr_backboard, CurrentShape_class, direction0, x0)
                 #ボードを２次元化
                 board = self.get_reshape_backboard(board)
@@ -681,7 +682,7 @@ class Block_Controller(object):
     ####################################
     def step_v2(self, curr_backboard,action,curr_shape_class):
         x0, direction0 = action
-        # 画面ボードデータをコピーしてあるX座標にテトリミノを固定しその画面ボードを返す
+        # 画面ボードデータをコピーして指定X座標にテトリミノを固定しその画面ボードを返す
         board = self.getBoard(curr_backboard, curr_shape_class, direction0, x0)
         #ボードを２次元化
         board = self.get_reshape_backboard(board)
@@ -714,7 +715,7 @@ class Block_Controller(object):
     ####################################
     def step(self, curr_backboard,action,curr_shape_class):
         x0, direction0 = action
-        # 画面ボードデータをコピーしてあるX座標にテトリミノを固定しその画面ボードを返す
+        # 画面ボードデータをコピーして指定X座標にテトリミノを固定しその画面ボードを返す
         board = self.getBoard(curr_backboard, curr_shape_class, direction0, x0)
         #ボードを２次元化
         board = self.get_reshape_backboard(board)
@@ -810,7 +811,8 @@ class Block_Controller(object):
             next_actions, next_states = zip(*next_steps.items())
             # next_states のテンソルを連結
             next_states = torch.stack(next_states)
-                       
+
+            ## GPU 使用できるときは使う
             if torch.cuda.is_available():
                 next_states = next_states.cuda()
         
@@ -820,7 +822,7 @@ class Block_Controller(object):
             self.model.train()
             # テンソルの勾配の計算を不可とする(Tensor.backward() を呼び出さないことが確実な場合)
             with torch.no_grad():
-                #推論を返す
+                #推論Q値を算出
                 predictions = self.model(next_states)[:, 0]
 
             # 乱数が epsilon より小さい場合は
@@ -837,13 +839,20 @@ class Block_Controller(object):
             
             done = False #game over flag
             
+            #####################################
+            # Double DQN 有効時
             #======predict max_a Q(s_(t+1),a)======
             #if use double dqn, predicted by main model
             if self.double_dqn:
+                # 画面ボードデータをコピーして 指定X座標にテトリミノを固定しその画面ボードを返す
                 next_backboard  = self.getBoard(curr_backboard, curr_shape_class, action[1], action[0])
+                #画面ボードで テトリミノ回転状態 に落下させたときの次の状態一覧を作成
                 next２_steps =self.get_next_func(next_backboard,next_piece_id,next_shape_class)
+                # 次の状態一覧の action と states で配列化
                 next2_actions, next2_states = zip(*next２_steps.items())
+                # next_states のテンソルを連結
                 next2_states = torch.stack(next2_states)
+                ## GPU 使用できるときは使う
                 if torch.cuda.is_available():
                     next2_states = next2_states.cuda()
                 ##########################
@@ -852,31 +861,48 @@ class Block_Controller(object):
                 self.model.train()
                 # テンソルの勾配の計算を不可とする
                 with torch.no_grad():
+                    #推論Q値を算出
                     next_predictions = self.model(next2_states)[:, 0]
+                # 次の index を推論の最大値とする
                 next_index = torch.argmax(next_predictions).item()
+                # 次の状態を index で指定し取得
                 next2_state = next2_states[next_index, :]
-                
+
+            ################################
+            # Target Next 有効時
             #if use target net, predicted by target model
             elif self.target_net:
+                # 画面ボードデータをコピーして 指定X座標にテトリミノを固定しその画面ボードを返す
                 next_backboard  = self.getBoard(curr_backboard, curr_shape_class, action[1], action[0])
+                #画面ボードで テトリミノ回転状態 に落下させたときの次の状態一覧を作成
                 next２_steps =self.get_next_func(next_backboard,next_piece_id,next_shape_class)
+                # 次の状態一覧の action と states で配列化
                 next2_actions, next2_states = zip(*next２_steps.items())
                 next2_states = torch.stack(next2_states)
+                ## GPU 使用できるときは使う
                 if torch.cuda.is_available():
                     next2_states = next2_states.cuda()
                 self.target_model.train()
                 # テンソルの勾配の計算を不可とする
                 with torch.no_grad():
                     next_predictions = self.target_model(next2_states)[:, 0]
+                # 次の index を推論の最大値とする
                 next_index = torch.argmax(next_predictions).item()
+                # 次の状態を index で指定し取得
                 next2_state = next2_states[next_index, :]
                 
             #if not use target net,predicted by main model
             else:
+                # 画面ボードデータをコピーして 指定X座標にテトリミノを固定しその画面ボードを返す
                 next_backboard  = self.getBoard(curr_backboard, curr_shape_class, action[1], action[0])
+                #画面ボードで テトリミノ回転状態 に落下させたときの次の状態一覧を作成
                 next２_steps =self.get_next_func(next_backboard,next_piece_id,next_shape_class)
+                # 次の状態一覧の action と states で配列化
                 next2_actions, next2_states = zip(*next２_steps.items())
+                # 次の状態を index で指定し取得
                 next2_states = torch.stack(next2_states)
+
+                ## GPU 使用できるときは使う
                 if torch.cuda.is_available():
                     next2_states = next2_states.cuda()
                 ##########################
@@ -885,18 +911,26 @@ class Block_Controller(object):
                 self.model.train()
                 # テンソルの勾配の計算を不可とする
                 with torch.no_grad():
+                    #推論Q値を算出
                     next_predictions = self.model(next2_states)[:, 0]
 
-                # epsilon:学習結果を乱数で変更する割合
-                # num_decay_epoch
+                # epsilon = 学習結果から乱数で変更する割合対象
+                # num_decay_epochs より前までは比例で初期 epsilon から減らしていく
+                # num_decay_ecpchs 以降は final_epsilon固定
                 epsilon = self.final_epsilon + (max(self.num_decay_epochs - self.epoch, 0) * (
                 self.initial_epsilon - self.final_epsilon) / self.num_decay_epochs)
                 u = random()
+                # epsilon より乱数 u が小さい場合フラグをたてる
                 random_action = u <= epsilon
+                
+                # 乱数が epsilon より小さい場合は
                 if random_action:
+                    # index を乱数指定
                     next_index = randint(0, len(next2_steps) - 1)
                 else:
+                   # 次の index を推論の最大値とする
                     next_index = torch.argmax(next_predictions).item()
+                # 次の状態を index により指定
                 next2_state = next2_states[next_index, :]
                 
             
@@ -925,10 +959,14 @@ class Block_Controller(object):
         elif self.mode == "predict" or self.mode == "predict_sample":
             #推論モードに切り替え
             self.model.eval()
+            # 画面ボードの次の状態一覧を action と states にわける
             next_actions, next_states = zip(*next_steps.items())
             next_states = torch.stack(next_states)
+            #推論Q値を算出
             predictions = self.model(next_states)[:, 0]
+            # 最大値の index 取得
             index = torch.argmax(predictions).item()
+            # 次の action を index を元に決定
             action = next_actions[index]
             nextMove["strategy"]["direction"] = action[1]
             nextMove["strategy"]["x"] = action[0]
@@ -962,7 +1000,7 @@ class Block_Controller(object):
         return coordArray
 
     ####################################
-    # 画面ボードデータをコピーしてあるX座標にテトリミノを固定しその画面ボードを返す
+    # 画面ボードデータをコピーして指定X座標にテトリミノを固定しその画面ボードを返す
     # board_backboard: 現状画面ボード
     # Shape_class: テトリミノ現/予告リスト
     # direction: テトリミノ回転方向
@@ -975,12 +1013,12 @@ class Block_Controller(object):
         # copy backboard data to make new board.
         # if not, original backboard data will be updated later.
         board = copy.deepcopy(board_backboard)
-        # あるX座標にテトリミノを固定しその画面ボードを返す
+        # 指定X座標にテトリミノを固定しその画面ボードを返す
         _board = self.dropDown(board, Shape_class, direction, x)
         return _board
 
     ####################################
-    # あるX座標にテトリミノを固定しその画面ボードを返す
+    # 指定X座標にテトリミノを固定しその画面ボードを返す
     # board: 現状画面ボード
     # Shape_class: テトリミノ現/予告リスト
     # direction: テトリミノ回転方向
