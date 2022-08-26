@@ -945,7 +945,9 @@ class Block_Controller(object):
             #self.replay_memory.append([self.state, reward, next_state,done])
             nextMove["strategy"]["direction"] = action[1]
             nextMove["strategy"]["x"] = action[0]
+            # Drop
             nextMove["strategy"]["y_operation"] = 1
+            # ブロック落とし数
             nextMove["strategy"]["y_moveblocknum"] = 1
 
             # 1ゲーム(EPOCH)の上限テトリミノ数を超えたらリセットフラグを立てる

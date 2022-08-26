@@ -289,13 +289,14 @@ class BoardData(object):
         return result
 
     #####################################
-    ##
+    ## 動かせるかどうか確認する
+    # 動かせない場合 False を返す
     #####################################
     def tryMoveCurrent(self, direction, x, y):
         return self.tryMove(self.currentShape, direction, x, y)
 
     #####################################
-    ##
+    ## 初期位置へ2回配置して動かせなかったら Reset
     #####################################
     def tryMoveNext(self, direction, x, y):
         ret = self.tryMove(self.nextShape, direction, x, y)
@@ -311,6 +312,7 @@ class BoardData(object):
 
     #####################################
     # direction (回転状態)のテトリミノ座標配列を取得し、それをx,yに配置可能か判定する
+    # 配置できない場合 False を返す
     ######################################
     def tryMove(self, shape, direction, x, y):
         # direction (回転状態)のテトリミノ座標配列を取得し、それをx,yに配置した場合の座標配列を繰り返す
@@ -324,7 +326,7 @@ class BoardData(object):
         return True
 
     #####################################
-    ##
+    ## テノリミノを1つ落とす
     #####################################
     def moveDown(self):
         # move piece, 1 block
@@ -341,7 +343,7 @@ class BoardData(object):
         return removedlines, moveDownlines
 
     #####################################
-    ##
+    ## テトリミノを一番下まで落とす
     #####################################
     def dropDown(self):
         # drop piece, immediately
@@ -357,7 +359,8 @@ class BoardData(object):
         return removedlines, dropdownlines
 
     #####################################
-    ##
+    ## 左へテトリミノを1つ動かす
+    ## 失敗したら Falase を返す
     #####################################
     def moveLeft(self):
         if self.tryMoveCurrent(self.currentDirection, self.currentX - 1, self.currentY):
@@ -368,7 +371,8 @@ class BoardData(object):
         return True
 
     #####################################
-    ##
+    ## 右へテトリミノを1つ動かす
+    ## 失敗したら Falase を返す
     #####################################
     def moveRight(self):
         if self.tryMoveCurrent(self.currentDirection, self.currentX + 1, self.currentY):
@@ -379,7 +383,7 @@ class BoardData(object):
         return True
 
     #####################################
-    ##
+    ## 右回転させる
     #####################################
     def rotateRight(self):
         if self.tryMoveCurrent((self.currentDirection + 1) % 4, self.currentX, self.currentY):
@@ -391,7 +395,7 @@ class BoardData(object):
         return True
 
     #####################################
-    ##
+    ## 左回転させる
     #####################################
     def rotateLeft(self):
         if self.tryMoveCurrent((self.currentDirection - 1) % 4, self.currentX, self.currentY):
