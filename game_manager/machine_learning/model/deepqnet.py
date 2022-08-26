@@ -9,7 +9,7 @@ class MLP(nn.Module):
         # 順伝搬処理初期化
         # Linear 線形変換
         # 活性化関数: ReLU = 正規化線形関数, 負の数は扱えないので注意、今回はすべて正の数なのでOK
-        # 入力 input_dim, 中間層 64 固定, 層数 3
+        # 入力 input_dim, 中間層 64 固定, 層数 4
         self.conv1 = nn.Sequential(nn.Linear(input_dim, 256), nn.ReLU(inplace=True))
         self.conv2 = nn.Sequential(nn.Linear(256, 256), nn.ReLU(inplace=True))
         self.conv22 = nn.Sequential(nn.Linear(256, 256), nn.ReLU(inplace=True))
@@ -31,6 +31,7 @@ class MLP(nn.Module):
     ##########################
     # 順伝搬処理
     # PyTorchはnn.Moduleクラスを基底とし、順伝搬の処理をforwardの中に書いている
+    # 通常は super クラスの __call__ を通じて呼び出される
     def forward(self, x):
         x = self.conv1(x)
         x = self.conv2(x)
@@ -88,6 +89,7 @@ class DeepQNetwork(nn.Module):
 
     ##############################
     # 順伝搬処理
+    # 通常は super クラスの __call__ を通じて呼び出される
     def forward(self, x):
         x = self.conv1(x)
         x = self.conv2(x)

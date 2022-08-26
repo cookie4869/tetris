@@ -785,6 +785,8 @@ class SidePanel(QFrame):
                 break
 
             ShapeClass, ShapeIdx, ShapeRange = BOARD_DATA.getShapeData(i) # nextShape
+
+            # テトリミノが原点から x,y 両方向に最大何マス占有するのか取得
             minX, maxX, minY, maxY = ShapeClass.getBoundingOffsets(0)
 
             dy = 1 * self.gridSize

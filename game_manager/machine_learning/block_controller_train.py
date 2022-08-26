@@ -147,7 +147,18 @@ class Block_Controller(object):
             #各関数規定
             self.get_next_func = self.get_next_states
             self.reward_func = self.step
+            # 報酬関連規定
             self.reward_weight = cfg["train"]["reward_weight"]
+            
+            if 'bumpiness_left_side_relax' in cfg["train"]:
+                self.bumpiness_left_side_relax = cfg["train"]["bumpiness_left_side_relax"]
+            else:
+                self.bumpiness_left_side_relax = 0
+
+            if 'max_height_relax' in cfg["train"]:
+                self.max_height_relax = cfg["train"]["max_height_relax"]
+            else:
+                self.max_height_relax = 0
         # DQN の場合
         elif cfg["model"]["name"]=="DQN":
             #=====load Deep Q Network=====
@@ -159,7 +170,22 @@ class Block_Controller(object):
             #各関数規定
             self.get_next_func = self.get_next_states_v2
             self.reward_func = self.step_v2
+            # 報酬関連規定
             self.reward_weight = cfg["train"]["reward_weight"]
+            
+            if 'bumpiness_left_side_relax' in cfg["train"]:
+                self.bumpiness_left_side_relax = cfg["train"]["bumpiness_left_side_relax"]
+            else:
+                self.bumpiness_left_side_relax = 0
+                
+            if 'max_height_relax' in cfg["train"]:
+                self.max_height_relax = cfg["train"]["max_height_relax"]
+            else:
+                self.max_height_relax = 0
+
+        # debug
+        print("bumpiness_left:", self.bumpiness_left_side_relax)
+        print("max_height:", self.max_height_relax)
 
         ####################
         # 推論の場合 推論ウェイトを torch　で読み込み model に入れる。
@@ -365,7 +391,7 @@ class Block_Controller(object):
 
                 done_batch = torch.from_numpy(np.array(done_batch)[:, None])
 
-                # Q 値の取得
+                # 順伝搬し Q 値を取得 (model の __call__ ≒ forward)
                 #max_next_state_batch = torch.stack(tuple(state for state in max_next_state_batch))
                 q_values = self.model(state_batch)
                 
@@ -388,7 +414,7 @@ class Block_Controller(object):
                     self.model.eval()
                     # テンソルの勾配の計算を不可とする
                     with torch.no_grad():
-                        # 推論 Q値算出
+                        # 順伝搬し Q 値を取得 (model の __call__ ≒ forward)
                         next_prediction_batch = self.model(next_state_batch)
 
                 ##########################
@@ -428,7 +454,9 @@ class Block_Controller(object):
                 
                 if self.scheduler!=None:
                     self.scheduler.step()
-                
+
+                ###################################
+                # 結果の出力
                 log = "Epoch: {} / {}, Score: {},  block: {},  Reward: {:.4f} Cleared lines: {}, col: {}/{}/{}/{} ".format(
                     self.epoch,
                     self.num_epochs,
@@ -461,6 +489,8 @@ class Block_Controller(object):
                 self.writer.add_scalar('Train/3 line', self.cleared_col[3], self.epoch - 1) 
                 self.writer.add_scalar('Train/4 line', self.cleared_col[4], self.epoch - 1) 
 
+            ###################################
+            # EPOCH 数が規定数を超えたら
             if self.epoch > self.num_epochs:
                 with open(self.log,"a") as f:
                     print("finish..", file=f)
@@ -474,7 +504,12 @@ class Block_Controller(object):
                     shutil.copyfile(file,self.latest_dir+"/"+os.path.basename(file))
                 with open(self.latest_dir+"/copy_base.txt","w") as f:
                     print(self.best_weight, file=f)
+                ####################
+                # 終了
                 exit() 
+
+        ###################################
+        # 推論の場合
         else:
             self.epoch += 1
             log = "Epoch: {} / {}, Score: {},  block: {}, Reward: {:.4f} Cleared lines: {}- {}/ {}/ {}/ {}".format(
@@ -489,6 +524,9 @@ class Block_Controller(object):
             self.cleared_col[3],
             self.cleared_col[4]
             )
+
+        ###################################
+        # ゲームパラメータ初期化
         self.reset_state()
         
 
@@ -509,7 +547,7 @@ class Block_Controller(object):
         self.tetrominoes = 0
 
     ####################################
-    #削除される列を数える
+    #削除されるLineを数える
     ####################################
     def check_cleared_rows(self,board):
         board_new = np.copy(board)
@@ -551,8 +589,8 @@ class Block_Controller(object):
 
         # 差分の絶対値をとり配列にする
         diffs = np.abs(currs - nexts)
-        # 左端列は7段差まで許容
-        if heights[1] - heights[0] > 3 or heights[1] - heights[0] < 0 :
+        # 左端列は self.bumpiness_left_side_relax 段差まで許容
+        if heights[1] - heights[0] > self.bumpiness_left_side_relax or heights[1] - heights[0] < 0 :
             diffs = np.append(abs(heights[1] - heights[0]), diffs)
 
         # 差分の絶対値を合計してでこぼこ度とする
@@ -616,7 +654,7 @@ class Block_Controller(object):
     # piece_id テトリミノ I L J T O S Z
     # currentshape_class = status["field_info"]["backboard"]
     ####################################
-    def get_next_states_v2(self,curr_backboard,piece_id,CurrentShape_class):
+    def get_next_states_v2(self, curr_backboard,piece_id, CurrentShape_class):
         states = {}
 
         # テトリミノごとに回転数をふりわけ
@@ -629,6 +667,7 @@ class Block_Controller(object):
 
         # 回転分繰り返す
         for direction0 in range(num_rotations):
+            # テトリミノが配置できる左端と右端の座標を返す
             x0Min, x0Max = self.getSearchXRange(CurrentShape_class, direction0)
             for x0 in range(x0Min, x0Max):
                 # get board data, as if dropdown block
@@ -640,6 +679,9 @@ class Block_Controller(object):
                 # numpy to tensor (配列を1次元追加)
                 reshape_backboard = torch.from_numpy(reshape_backboard[np.newaxis,:,:]).float()
                 # 画面ボードx0で テトリミノ回転状態 direction0 に落下させたときの次の状態を作成
+                #  states
+                #    Key = Tuple (テトリミノ画面ボードX座標, テトリミノ回転状態)
+                #    Value = 画面ボード状態
                 states[(x0, direction0)] = reshape_backboard
         return states
 
@@ -656,6 +698,7 @@ class Block_Controller(object):
             num_rotations = 4
 
         for direction0 in range(num_rotations):
+            # テトリミノが配置できる左端と右端の座標を返す
             x0Min, x0Max = self.getSearchXRange(CurrentShape_class, direction0)
             for x0 in range(x0Min, x0Max):
                 # get board data, as if dropdown block
@@ -697,7 +740,7 @@ class Block_Controller(object):
         reward += 0.01
         # 形状の罰
         reward -= self.reward_weight[0] *bampiness 
-        if max_height > 8:
+        if max_height > self.max_height_relax:
             reward -= self.reward_weight[1] * max(0,max_height)
         reward -= self.reward_weight[2] * hole_num
 
@@ -730,7 +773,7 @@ class Block_Controller(object):
         reward += 0.01
         # 罰
         reward -= self.reward_weight[0] *bampiness 
-        if max_height > 8:
+        if max_height > self.max_height_relax:
             reward -= self.reward_weight[1] * max(0,max_height)
         reward -= self.reward_weight[2] * hole_num
         self.epoch_reward += reward
@@ -791,9 +834,11 @@ class Block_Controller(object):
 
         ###################
         #画面ボードで テトリミノ回転状態 に落下させたときの次の状態一覧を作成
-        # [x, directopn] xとdirectionの配列に
-        next_steps =self.get_next_func(curr_backboard,curr_piece_id,curr_shape_class)
-        
+        # next_steps
+        #    Key = Tuple (テトリミノ画面ボードX座標, テトリミノ回転状態)
+        #    Value = 画面ボード状態
+        next_steps = self.get_next_func(curr_backboard, curr_piece_id, curr_shape_class)
+
         ####################
         # 学習の場合
         if self.mode=="train" or self.mode=="train_sample" or self.mode=="train_sample2":
@@ -808,8 +853,10 @@ class Block_Controller(object):
             random_action = u <= epsilon
 
             # 次の状態一覧の action と states で配列化
+            #    next_actions  = Tuple (テトリミノ画面ボードX座標, テトリミノ回転状態)　一覧
+            #    next_states = 画面ボード状態 一覧
             next_actions, next_states = zip(*next_steps.items())
-            # next_states のテンソルを連結
+            # next_states (画面ボード状態 一覧) のテンソルを連結 (画面ボード状態のlist の最初の要素に状態が追加された)
             next_states = torch.stack(next_states)
 
             ## GPU 使用できるときは使う
@@ -822,8 +869,12 @@ class Block_Controller(object):
             self.model.train()
             # テンソルの勾配の計算を不可とする(Tensor.backward() を呼び出さないことが確実な場合)
             with torch.no_grad():
-                #推論Q値を算出
-                predictions = self.model(next_states)[:, 0]
+                # 順伝搬し Q 値を取得 (model の __call__ ≒ forward)
+                predictions = self.model(next_states)[:,:]
+                # predict = self.model(next_states)[:,:]
+                # predictions = predict[:,0]
+                # print("input: ", next_states)
+                # print("predict: ", predict[:,0])
 
             # 乱数が epsilon より小さい場合は
             if random_action:
@@ -861,7 +912,7 @@ class Block_Controller(object):
                 self.model.train()
                 # テンソルの勾配の計算を不可とする
                 with torch.no_grad():
-                    #推論Q値を算出
+                    # 順伝搬し Q 値を取得 (model の __call__ ≒ forward)
                     next_predictions = self.model(next2_states)[:, 0]
                 # 次の index を推論の最大値とする
                 next_index = torch.argmax(next_predictions).item()
@@ -911,7 +962,7 @@ class Block_Controller(object):
                 self.model.train()
                 # テンソルの勾配の計算を不可とする
                 with torch.no_grad():
-                    #推論Q値を算出
+                    # 順伝搬し Q 値を取得 (model の __call__ ≒ forward)
                     next_predictions = self.model(next2_states)[:, 0]
 
                 # epsilon = 学習結果から乱数で変更する割合対象
@@ -964,7 +1015,7 @@ class Block_Controller(object):
             # 画面ボードの次の状態一覧を action と states にわける
             next_actions, next_states = zip(*next_steps.items())
             next_states = torch.stack(next_states)
-            #推論Q値を算出
+            # 順伝搬し Q 値を取得 (model の __call__ ≒ forward)
             predictions = self.model(next_states)[:, 0]
             # 最大値の index 取得
             index = torch.argmax(predictions).item()
@@ -977,7 +1028,7 @@ class Block_Controller(object):
         return nextMove
     
     ####################################
-    # 
+    # テトリミノが配置できる左端と右端の座標を返す
     # self,
     # Shape_class: 現在と予告テトリミノの配列
     # direction: 現在のテトリミノ方向
@@ -986,8 +1037,11 @@ class Block_Controller(object):
         #
         # get x range from shape direction.
         #
+        # テトリミノが原点から x 両方向に最大何マス占有するのか取得
         minX, maxX, _, _ = Shape_class.getBoundingOffsets(direction) # get shape x offsets[minX,maxX] as relative value.
+        # 左方向のサイズ分
         xMin = -1 * minX
+        # 右方向のサイズ分（画面サイズからひく）
         xMax = self.board_data_width - maxX
         return xMin, xMax
 

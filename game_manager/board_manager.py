@@ -98,11 +98,12 @@ class Shape(object):
         return ((x + xx, y + yy) for xx, yy in self.getRotatedOffsets(direction))
 
     ###################
-    # 
+    # テトリミノが原点から x,y 両方向に最大何マス占有するのか返す
     ###################
     def getBoundingOffsets(self, direction):
         # テトリミノ形状を回転した座標を返す
         tmpCoords = self.getRotatedOffsets(direction)
+        # 
         minX, maxX, minY, maxY = 0, 0, 0, 0
         for x, y in tmpCoords:
             if minX > x:
@@ -264,6 +265,7 @@ class BoardData(object):
                 self.ShapeList.insert(len(self.ShapeList), Shape(self.getNewShapeIndex()))
             self.nextShape = self.ShapeList[1]
 
+        # テトリミノが原点から x,y 両方向に最大何マス占有するのか取得
         minX, maxX, minY, maxY = self.nextShape.getBoundingOffsets(0)
         result = False
 
