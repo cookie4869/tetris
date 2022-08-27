@@ -723,7 +723,7 @@ class Block_Controller(object):
     ####################################
     #報酬を計算(2次元用) 
     ####################################
-    def step_v2(self, curr_backboard,action,curr_shape_class):
+    def step_v2(self, curr_backboard, action, curr_shape_class):
         x0, direction0 = action
         # 画面ボードデータをコピーして指定X座標にテトリミノを固定しその画面ボードを返す
         board = self.getBoard(curr_backboard, curr_shape_class, direction0, x0)
@@ -756,7 +756,7 @@ class Block_Controller(object):
     ####################################
     #報酬を計算(1次元用) 
     ####################################
-    def step(self, curr_backboard,action,curr_shape_class):
+    def step(self, curr_backboard, action, curr_shape_class):
         x0, direction0 = action
         # 画面ボードデータをコピーして指定X座標にテトリミノを固定しその画面ボードを返す
         board = self.getBoard(curr_backboard, curr_shape_class, direction0, x0)
@@ -886,7 +886,8 @@ class Block_Controller(object):
             # 次の action states を上記の index 元に決定
             next_state = next_states[index, :]
             action = next_actions[index]
-            reward = self.reward_func(curr_backboard,action,curr_shape_class)
+            # step, step_v2 により報酬計算
+            reward = self.reward_func(curr_backboard, action, curr_shape_class)
             
             done = False #game over flag
             
@@ -898,9 +899,9 @@ class Block_Controller(object):
                 # 画面ボードデータをコピーして 指定X座標にテトリミノを固定しその画面ボードを返す
                 next_backboard  = self.getBoard(curr_backboard, curr_shape_class, action[1], action[0])
                 #画面ボードで テトリミノ回転状態 に落下させたときの次の状態一覧を作成
-                next２_steps =self.get_next_func(next_backboard,next_piece_id,next_shape_class)
+                next2_steps = self.get_next_func(next_backboard, next_piece_id, next_shape_class)
                 # 次の状態一覧の action と states で配列化
-                next2_actions, next2_states = zip(*next２_steps.items())
+                next2_actions, next2_states = zip(*next2_steps.items())
                 # next_states のテンソルを連結
                 next2_states = torch.stack(next2_states)
                 ## GPU 使用できるときは使う
@@ -926,9 +927,10 @@ class Block_Controller(object):
                 # 画面ボードデータをコピーして 指定X座標にテトリミノを固定しその画面ボードを返す
                 next_backboard  = self.getBoard(curr_backboard, curr_shape_class, action[1], action[0])
                 #画面ボードで テトリミノ回転状態 に落下させたときの次の状態一覧を作成
-                next２_steps =self.get_next_func(next_backboard,next_piece_id,next_shape_class)
+                next2_steps =self.get_next_func(next_backboard,next_piece_id,next_shape_class)
                 # 次の状態一覧の action と states で配列化
-                next2_actions, next2_states = zip(*next２_steps.items())
+                next2_actions, next2_states = zip(*next2_steps.items())
+                # next_states のテンソルを連結
                 next2_states = torch.stack(next2_states)
                 ## GPU 使用できるときは使う
                 if torch.cuda.is_available():
@@ -947,9 +949,9 @@ class Block_Controller(object):
                 # 画面ボードデータをコピーして 指定X座標にテトリミノを固定しその画面ボードを返す
                 next_backboard  = self.getBoard(curr_backboard, curr_shape_class, action[1], action[0])
                 #画面ボードで テトリミノ回転状態 に落下させたときの次の状態一覧を作成
-                next２_steps =self.get_next_func(next_backboard,next_piece_id,next_shape_class)
+                next2_steps =self.get_next_func(next_backboard,next_piece_id,next_shape_class)
                 # 次の状態一覧の action と states で配列化
-                next2_actions, next2_states = zip(*next２_steps.items())
+                next2_actions, next2_states = zip(*next2_steps.items())
                 # 次の状態を index で指定し取得
                 next2_states = torch.stack(next2_states)
 
@@ -996,7 +998,7 @@ class Block_Controller(object):
             #self.replay_memory.append([self.state, reward, next_state,done])
             nextMove["strategy"]["direction"] = action[1]
             nextMove["strategy"]["x"] = action[0]
-            # Drop
+            # Drop Down:1 Move Down:0
             nextMove["strategy"]["y_operation"] = 1
             # ブロック落とし数
             nextMove["strategy"]["y_moveblocknum"] = 1
@@ -1021,9 +1023,13 @@ class Block_Controller(object):
             index = torch.argmax(predictions).item()
             # 次の action を index を元に決定
             action = next_actions[index]
+            # テトリミノ回転
             nextMove["strategy"]["direction"] = action[1]
+            # 横方向
             nextMove["strategy"]["x"] = action[0]
+            # Drop Down:1 Move Down:0
             nextMove["strategy"]["y_operation"] = 1
+            # Move Down 数
             nextMove["strategy"]["y_moveblocknum"] = 1
         return nextMove
     

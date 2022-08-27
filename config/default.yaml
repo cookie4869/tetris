@@ -20,7 +20,7 @@ train:
   gamma: 0.99 # 割引率 ... t+1 の報酬をどの程度割り引いて考えるか
   max_penalty: -1 # 正規化する場合の最小報酬
   target_net: True
-  target_copy_intarval: 500
+  target_copy_intarval: 500 # Target Net をロードする EPOCH 数間隔
   replay_memory_size: 30000
   double_dqn: True # Dobule DQN 有効化
   reward_clipping: True # 報酬を 1 で正規化、ただし消去報酬のみ

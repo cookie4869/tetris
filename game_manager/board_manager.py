@@ -328,24 +328,30 @@ class BoardData(object):
         return True
 
     #####################################
-    ## テノリミノを1つ落とす
+    ## テノリミノを1つ落とし消去ラインとテトリミノ落下数を返す
     #####################################
     def moveDown(self):
         # move piece, 1 block
         # and return the number of lines which is removed in this function.
         removedlines = 0
         moveDownlines = 0
+        # 動かせるか確認
         if self.tryMoveCurrent(self.currentDirection, self.currentX, self.currentY + 1):
             self.currentY += 1
             moveDownlines += 1
+        # 動かせなくなったら確定
         else:
+            ##画面ボードに固着したテトリミノを書き込む
             self.mergePiece()
+            ## 画面ボードの消去できるラインを探して消去し、画面ボードを更新、そして消した Line を返す
             removedlines = self.removeFullLines()
+            ## 新しい予告テトリミノ配列作成
             self.createNewPiece()
+            
         return removedlines, moveDownlines
 
     #####################################
-    ## テトリミノを一番下まで落とす
+    ## テトリミノを一番下まで落とし消去ラインとテトリミノ落下数を返す
     #####################################
     def dropDown(self):
         # drop piece, immediately
@@ -355,8 +361,11 @@ class BoardData(object):
             self.currentY += 1
             dropdownlines += 1
 
+        ##画面ボードに固着したテトリミノを書き込む
         self.mergePiece()
+        ## 画面ボードの消去できるラインを探して消去し、画面ボードを更新、そして消した Line を返す
         removedlines = self.removeFullLines()
+        ## 新しい予告テトリミノ配列作成
         self.createNewPiece()
         return removedlines, dropdownlines
 
@@ -409,19 +418,26 @@ class BoardData(object):
         return True
 
     #####################################
-    ##
+    ## 画面ボードの消去できるラインを探して消去し、画面ボードを更新、そして消した Line を返す
     #####################################
     def removeFullLines(self):
         newBackBoard = [0] * BoardData.width * BoardData.height
         newY = BoardData.height - 1
+        # 消去ライン0
         lines = 0
+        # 最下段行から探索
         for y in range(BoardData.height - 1, -1, -1):
+            # y行のブロック数を数える
             blockCount = sum([1 if self.backBoard[x + y * BoardData.width] > 0 else 0 for x in range(BoardData.width)])
+            # y行のブロック数が幅より少ない
             if blockCount < BoardData.width:
+                # そのままコピー
                 for x in range(BoardData.width):
                     newBackBoard[x + newY * BoardData.width] = self.backBoard[x + y * BoardData.width]
                 newY -= 1
+            # y行のブロックがうまっている
             else:
+                # 消去ラインカウント+1
                 lines += 1
         if lines > 0:
             self.backBoard = newBackBoard

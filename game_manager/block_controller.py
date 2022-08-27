@@ -31,10 +31,14 @@ class Block_Controller(object):
         pprint.pprint(GameStatus, width = 61, compact = True)
 
         # search best nextMove -->
-        # random sample
+        ## random sample
+        # テトリミノ回転
         nextMove["strategy"]["direction"] = random.randint(0,4)
+        # 横方向移動
         nextMove["strategy"]["x"] = random.randint(0,9)
+        # Drop Down:1, Move Down:0
         nextMove["strategy"]["y_operation"] = 1
+        # Move Down 数
         nextMove["strategy"]["y_moveblocknum"] = random.randint(1,8)
         # search best nextMove <--
 
