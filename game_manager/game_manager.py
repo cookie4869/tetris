@@ -287,7 +287,7 @@ class Game_Manager(QMainWindow):
                                   "y_moveblocknum": "none", # amount of next y movement
                                   },
                             "option":
-                                { "reset_callback_function_addr":None,
+                                { "reset_callback_function_addr":None, # ゲームオーバーリセット時のコールバック関数
                                   "reset_all_field": None,
                                   "force_reset_field": None,
                                 }
@@ -329,6 +329,8 @@ class Game_Manager(QMainWindow):
                     # テトリミノ回転数
                     self.nextMove["strategy"]["direction"] = BOARD_DATA.currentDirection
 
+            #######################
+            ## 次の手を動かす
             if self.nextMove:
                 # shape direction operation
                 next_x = self.nextMove["strategy"]["x"]
@@ -390,9 +392,9 @@ class Game_Manager(QMainWindow):
             #if BOARD_DATA.currentY < 1: 
             if BOARD_DATA.currentY < 1 or self.nextMove["option"]["force_reset_field"] == True:
                 # if Piece cannot movedown and stack, reset field
-                if self.nextMove["option"]["reset_callback_function_addr"] != None:
+                if self.nextMove["option"]["reset_callback_function_addr"] != None: # ゲームオーバーリセット時のコールバック関数
                     # if necessary, call reset_callback_function
-                    reset_callback_function = self.nextMove["option"]["reset_callback_function_addr"]
+                    reset_callback_function = self.nextMove["option"]["reset_callback_function_addr"] # ゲームオーバーリセット時のコールバック関数
                     reset_callback_function()
 
                 if self.nextMove["option"]["reset_all_field"] == True:
