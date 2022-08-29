@@ -3,7 +3,7 @@ common:
   log_path: tensorboard
 model:
   name: DQN # 学習方式 (MLP DQN
-  finetune: True # 以前の学習結果を利用する  
+  finetune: False # 以前の学習結果を利用する  
 state:
   dim: 4
 train:
@@ -12,9 +12,9 @@ train:
   lr_gamma: 0.1 # SGD 用 ... Step Size 進んだ EPOCH で gammma が学習率に乗算される
   lr_momentum: 0.99 # SGD 用 ... モーメンタム... 今までの移動とこれから動くべき移動の平均をとり振動を防ぐための関数
   lr_step_size: 1000 # SGD 用 ... step size 学習率更新タイミングの EPOCH 数
-  num_epoch: 3000 # 試行回数
-  num_decay_epochs: 3500 # ε収束させる試行回数
-  initial_epsilon: 1.0e-3 # ε... 学習が局所解にならないように乱数で動かして最適値する。初期値 Fine Tune の場合は小さめに
+  num_epoch: 10000 # 試行回数
+  num_decay_epochs: 5000 # ε収束させる試行回数
+  initial_epsilon: 1.0 # ε... 学習が局所解にならないように乱数で動かして最適値する。学習初期は 1, 初期値 Fine Tune の場合は小さめに
   final_epsilon: 5.0e-4 # 上記εを漸減させたときの最終値
   batch_size: 512 # バッチサイズ　確率的勾配降下法における、全パラメータのうちランダム抽出して勾配を求めるパラメータの数
   gamma: 0.99 # 割引率 ... t+1 の報酬をどの程度割り引いて考えるか
@@ -40,6 +40,7 @@ train:
     - 0.0002 #1 #hole_num
   bumpiness_left_side_relax: 5 # 左端のでこぼこだけどこまで許容するか
   max_height_relax: 7 # 高さをどこまで許容するか
+  move_down_flag: 1 # Move Down 有効化
 tetris:
   board_height: 22
   board_width: 10

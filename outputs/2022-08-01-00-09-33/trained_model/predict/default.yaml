@@ -40,6 +40,7 @@ train:
     - 0.0002 #1 #hole_num
   bumpiness_left_side_relax: 5 # 左端のでこぼこだけどこまで許容するか
   max_height_relax: 7 # 高さをどこまで許容するか
+  move_down_flag: 1 # Move Down 有効化
 tetris:
   board_height: 22
   board_width: 10

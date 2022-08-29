@@ -38,9 +38,10 @@ class Block_Controller(object):
 
     # Debug 出力
     debug_flag_shift_rotation = 0
-    debug_flag_shift_rotation_success = 1
+    debug_flag_shift_rotation_success = 0
     debug_flag_try_move = 0
     debug_flag_drop_down = 0
+    debug_flag_move_down = 1
 
     def __init__(self):
         # init parameter
@@ -126,6 +127,10 @@ class Block_Controller(object):
             print(0, file=f)
 
 
+        if 'move_down_flag' in cfg["train"]:
+            self.move_down_flag = cfg["train"]["move_down_flag"]
+        else:
+            self.move_down_flag = 0
         ####################
         #=====Set tetris parameter=====
         # Tetris ゲーム指定
@@ -293,6 +298,7 @@ class Block_Controller(object):
         self.tetrominoes = 0
 
         # 前のターンで Drop をスキップしていたか？ (-1: していない, それ以外: していた)
+        # third_y, forth_direction, fifth_x
         self.skip_drop = [-1, -1, -1]
 
         # γ 割引率 = 将来の価値をどの程度下げるか
@@ -325,7 +331,6 @@ class Block_Controller(object):
         self.target_net = cfg["train"]["target_net"]
         if self.double_dqn:
             self.target_net = True
-            
 
         #Target_net ON ならば
         if self.target_net:
@@ -369,7 +374,8 @@ class Block_Controller(object):
             pass
     
     ####################################
-    # Game の Reset の実施
+    # Game の Reset の実施 (Game Over後)
+    # nextMove["option"]["reset_callback_function_addr"] へ設定
     ####################################
     def update(self):
 
@@ -544,7 +550,7 @@ class Block_Controller(object):
         
 
     ####################################
-    #累積値の初期化
+    #累積値の初期化 (Game Over 後)
     ####################################
     def reset_state(self):
         if self.mode=="train" or self.mode=="train_sample" or self.mode=="train_sample2": 
@@ -561,6 +567,7 @@ class Block_Controller(object):
         # テトリミノ 0 個
         self.tetrominoes = 0
         # 前のターンで Drop をスキップしていたか？ (-1: していない, それ以外: していた)
+        # third_y, forth_direction, fifth_x
         self.skip_drop = [-1, -1, -1]
 
     ####################################
@@ -672,7 +679,7 @@ class Block_Controller(object):
     # piece_id テトリミノ I L J T O S Z
     # currentshape_class = status["field_info"]["backboard"]
     ####################################
-    def get_next_states_v2(self, curr_backboard,piece_id, CurrentShape_class):
+    def get_next_states_v2(self, curr_backboard, piece_id, CurrentShape_class):
         # 次の状態一覧
         states = {}
 
@@ -694,7 +701,7 @@ class Block_Controller(object):
             num_rotations = 4
 
         ####################
-        ## Drop Down の場合の一覧作成
+        ## Drop Down 落下 の場合の一覧作成
         # テトリミノ回転方向ごとに一覧追加
         for direction0 in range(num_rotations):
             # テトリミノが配置できる左端と右端の座標を返す
@@ -703,7 +710,7 @@ class Block_Controller(object):
 
             for x0 in range(x0Min, x0Max):
                 # get board data, as if dropdown block
-                # 画面ボードデータをコピーして指定X座標にテトリミノを固定しその画面ボードを返す
+                # 画面ボードデータをコピーして指定座標にテトリミノを配置し落下させた画面ボードとy座標を返す
                 board, drop_y = self.getBoard(curr_backboard, CurrentShape_class, direction0, x0, -1)
                 # 後のため保存
                 drop_y_list[(direction0, x0)] = drop_y
@@ -715,14 +722,19 @@ class Block_Controller(object):
                 reshape_backboard = torch.from_numpy(reshape_backboard[np.newaxis,:,:]).float()
                 # 画面ボードx0で テトリミノ回転状態 direction0 に落下させたときの次の状態を作成 追加
                 #  states
-                #    Key = Tuple (テトリミノ Drop Down 時画面ボードX座標, テトリミノ回転状態
-                #                 テトリミノ Move Down 数, テトリミノ追加移動X座標, テトリミノ追加回転)
+                #    Key = Tuple (テトリミノ Drop Down 落下 時画面ボードX座標, テトリミノ回転状態
+                #                 テトリミノ Move Down 降下 数, テトリミノ追加移動X座標, テトリミノ追加回転)
                 #                 ... -1 の場合 動作対象外
                 #    Value = 画面ボード状態
+                # (action 用)
                 states[(x0, direction0, -1, -1, -1)] = reshape_backboard
 
+        # Move Down 降下無効の場合
+        if self.move_down_flag == 0:
+            return states
+
         ####################
-        ## Move Down の場合の一覧作成
+        ## Move Down 降下 の場合の一覧作成
         # 追加補正移動
         third_y = -1
         forth_direction = -1
@@ -829,8 +841,12 @@ class Block_Controller(object):
                                 print(shift_x, ":", judge, end='/')
                             # 右移動可能
                             if judge:
+                                ####
                                 ## 登録済か確認し、STATES へ入れる
-                                checked_board = self.second_drop_down(curr_backboard, CurrentShape_class, forth_direction, fifth_x, third_y, checked_board)
+                                states, checked_board = \
+                                    self.second_drop_down(curr_backboard, CurrentShape_class, \
+                                                          first_direction, second_x, third_y, forth_direction, fifth_x, \
+                                                          states, checked_board)
                             # 右移動不可なら終了
                             else:
                                 ## 最初の位置で右回転がうまく行かない場合は回転作業も抜ける
@@ -869,8 +885,12 @@ class Block_Controller(object):
 
                             # 左移動可能
                             if judge:
+                                ####
                                 ## 登録済か確認し、STATES へ入れる
-                                checked_board = self.second_drop_down(curr_backboard, CurrentShape_class, forth_direction, fifth_x, third_y, checked_board)
+                                states, checked_board = \
+                                    self.second_drop_down(curr_backboard, CurrentShape_class, \
+                                                          first_direction, second_x, third_y, forth_direction, fifth_x, \
+                                                          states, checked_board)
 
                             # 左移動不可なら終了
                             else:
@@ -887,7 +907,7 @@ class Block_Controller(object):
         # Debug
         if self.debug_flag_shift_rotation_success == 1 :
             print("")
-
+        # states (action) を返す
         return states
 
 
@@ -895,7 +915,7 @@ class Block_Controller(object):
     #次の状態を取得(1次元用) MLP  .... 画面ボードで テトリミノ回転状態 に落下させたときの次の状態一覧を作成
     #  get_next_func でよびだされる
     ####################################
-    def get_next_states(self,curr_backboard,piece_id,CurrentShape_class):
+    def get_next_states(self, curr_backboard, piece_id, CurrentShape_class):
         # 次の状態一覧
         states = {}
 
@@ -907,7 +927,7 @@ class Block_Controller(object):
             num_rotations = 4
 
         ####################
-        ## Drop Down の場合の一覧作成
+        ## Drop Down 落下 の場合の一覧作成
         # テトリミノ回転方向ごとに一覧追加
         for direction0 in range(num_rotations):
             # テトリミノが配置できる左端と右端の座標を返す
@@ -915,19 +935,19 @@ class Block_Controller(object):
             # テトリミノ左端から右端まで配置
             for x0 in range(x0Min, x0Max):
                 # get board data, as if dropdown block
-                # 画面ボードデータをコピーして指定X座標にテトリミノを固定しその画面ボードを返す
+                # 画面ボードデータをコピーして指定座標にテトリミノを配置し落下させた画面ボードとy座標を返す
                 board, drop_y = self.getBoard(curr_backboard, CurrentShape_class, direction0, x0, -1)
                 #ボードを２次元化
                 reshape_board = self.get_reshape_backboard(board)
                 # 画面ボードx0で テトリミノ回転状態 direction0 に落下させたときの次の状態を作成
                 #  states
-                #    Key = Tuple (テトリミノ Drop Down 時画面ボードX座標, テトリミノ回転状態
-                #                 テトリミノ Move Down 数, テトリミノ追加移動X座標, テトリミノ追加回転)
+                #    Key = Tuple (テトリミノ Drop Down 落下 時画面ボードX座標, テトリミノ回転状態
+                #                 テトリミノ Move Down 降下 数, テトリミノ追加移動X座標, テトリミノ追加回転)
                 #    Value = 画面ボード状態
                 states[(x0, direction0, 0, 0, 0)] = self.get_state_properties(reshape_board)
 
         ####################
-        ## Move Down の場合の一覧作成
+        ## Move Down 降下 の場合の一覧作成
 
 
 
@@ -936,11 +956,12 @@ class Block_Controller(object):
     ####################################
     # テトリミノ配置して states に登録する (ずらし時用)
     ####################################
-    def second_drop_down(self, curr_backboard, CurrentShape_class, forth_direction, fifth_x, third_y, checked_board):
+    def second_drop_down(self, curr_backboard, CurrentShape_class, \
+                         first_direction, second_x, third_y, forth_direction, fifth_x, states, checked_board):
         ##debug
         #self.debug_flag_drop_down = 1
 
-        # 画面ボードデータをコピーして指定座標から落下させたところにテトリミノを固定しその画面ボードを返す
+        # 画面ボードデータをコピーして指定座標にテトリミノを配置し落下させた画面ボードとy座標を返す
         new_board, drop_y = self.getBoard(curr_backboard, CurrentShape_class, forth_direction, fifth_x, third_y)
         # 落下指定
         sixth_y = third_y + drop_y
@@ -955,23 +976,28 @@ class Block_Controller(object):
             #debug
             if self.debug_flag_shift_rotation_success == 1:
                 print("<=NEW***", end='')
-            # 登録
+            # 降下後動作として登録 (重複防止)
             checked_board[(forth_direction, fifth_x, sixth_y)] = True
+            # ボードを２次元化
+            reshape_backboard = self.get_reshape_backboard(new_board)
+            # numpy to tensor (配列を1次元追加)
+            reshape_backboard = torch.from_numpy(reshape_backboard[np.newaxis,:,:]).float()
+            ####################
+            # 画面ボードx0で テトリミノ移動した時次のの状態を作成 追加
+            #  states
+            #    Key = Tuple (テトリミノ Drop Down 落下 時画面ボードX座標, テトリミノ回転状態
+            #                 テトリミノ Move Down 降下 数, テトリミノ追加移動X座標, テトリミノ追加回転)
+            #                 ... -1 の場合 動作対象外
+            #    Value = 画面ボード状態
+            # (action 用)
+            states[(second_x, first_direction, third_y, forth_direction, fifth_x)] = reshape_backboard
 
-        # 画面ボードx0で テトリミノ回転状態 direction0 に落下させたときの次の状態を作成 追加
-        #  states
-        #    Key = Tuple (テトリミノ Drop Down 時画面ボードX座標, テトリミノ回転状態
-        #                 テトリミノ Y 移動座標, テトリミノ追加移動X座標, テトリミノ追加回転)
-        #                 ... -1 の場合 動作対象外
-        #    
-        #    Value = 画面ボード状態
-        #states[(x0, direction0, third_y, forth_direction, fifth_x)] = reshape_curr_backboard
 
         #debug
         if self.debug_flag_shift_rotation_success == 1:
             print("")
 
-        return checked_board
+        return states, checked_board
 
     ####################################
     # 配置できるか確認する
@@ -1030,10 +1056,11 @@ class Block_Controller(object):
 
     ####################################
     #報酬を計算(2次元用) 
+    #reward_func から呼び出される
     ####################################
     def step_v2(self, curr_backboard, action, curr_shape_class):
         x0, direction0, third_y, forth_direction, fifth_x = action
-        # 画面ボードデータをコピーして指定X座標にテトリミノを固定しその画面ボードを返す
+        # 画面ボードデータをコピーして指定座標にテトリミノを配置し落下させた画面ボードとy座標を返す
         board, drop_y = self.getBoard(curr_backboard, curr_shape_class, direction0, x0, -1)
         #ボードを２次元化
         reshape_board = self.get_reshape_backboard(board)
@@ -1063,10 +1090,11 @@ class Block_Controller(object):
 
     ####################################
     #報酬を計算(1次元用) 
+    #reward_func から呼び出される
     ####################################
     def step(self, curr_backboard, action, curr_shape_class):
         x0, direction0, third_y, forth_direction, fifth_x = action
-        # 画面ボードデータをコピーして指定X座標にテトリミノを固定しその画面ボードを返す
+        # 画面ボードデータをコピーして指定座標にテトリミノを配置し落下させた画面ボードとy座標を返す
         board, drop_y = self.getBoard(curr_backboard, curr_shape_class, direction0, x0, -1)
         #ボードを２次元化
         reshape_board = self.get_reshape_backboard(board)
@@ -1106,7 +1134,7 @@ class Block_Controller(object):
     def GetNextMove(self, nextMove, GameStatus,yaml_file=None,weight=None):
 
         t1 = datetime.now()
-        # RESET 関数設定 callback function 代入
+        # RESET 関数設定 callback function 代入 (Game Over 時)
         nextMove["option"]["reset_callback_function_addr"] = self.update
         # mode の取得 (train である) 
         self.mode = GameStatus["judge_info"]["mode"]
@@ -1116,6 +1144,7 @@ class Block_Controller(object):
         if self.init_train_parameter_flag == False:
             self.init_train_parameter_flag = True
             self.set_parameter(yaml_file=yaml_file,predict_weight=weight)        
+
         self.ind =GameStatus["block_info"]["currentShape"]["index"]
         curr_backboard = GameStatus["field_info"]["backboard"]
 
@@ -1134,18 +1163,31 @@ class Block_Controller(object):
         curr_piece_id =GameStatus["block_info"]["currentShape"]["index"]
         next_piece_id =GameStatus["block_info"]["nextShape"]["index"]
 
-        ##################
-        # 二次元化
-        reshape_backboard = self.get_reshape_backboard(curr_backboard)
-               
+        #reshape_backboard = self.get_reshape_backboard(curr_backboard)
+
         #self.state = reshape_backboard
 
-
+        ###############################################
+        ## Move Down で 前回の持ち越し動作がある場合　その動作をして終了
+        if self.skip_drop != [-1, -1, -1]:
+            # third_y, forth_direction, fifth_x
+            nextMove["strategy"]["direction"] = self.skip_drop[1]
+            # 横方向
+            nextMove["strategy"]["x"] = self.skip_drop[2]
+            # Move Down 降下
+            nextMove["strategy"]["y_operation"] = 1
+            # Move Down 降下 数
+            nextMove["strategy"]["y_moveblocknum"] = 1
+            # 前のターンで Drop をスキップしていたか？を解除 (-1: していない, それ以外: していた)
+            self.skip_drop = [-1, -1, -1]
+            #終了   
+            return nextMove
+        
         ###################
         #画面ボードで テトリミノ回転状態 に落下させたときの次の状態一覧を作成
         # next_steps
         #    Key = Tuple (テトリミノ画面ボードX座標, テトリミノ回転状態)
-        #                 テトリミノ Move Down 数, テトリミノ追加移動X座標, テトリミノ追加回転)
+        #                 テトリミノ Move Down 降下 数, テトリミノ追加移動X座標, テトリミノ追加回転)
         #    Value = 画面ボード状態
         next_steps = self.get_next_func(curr_backboard, curr_piece_id, curr_shape_class)
 
@@ -1195,6 +1237,14 @@ class Block_Controller(object):
                 index = torch.argmax(predictions).item()
             # 次の action states を上記の index 元に決定
             next_state = next_states[index, :]
+
+            # index にて次の action の決定 
+            # action の list
+            # 0: 2番目 X軸移動
+            # 1: 1番目 テトリミノ回転
+            # 2: 3番目 Y軸降下 (-1: で Drop)
+            # 3: 4番目 テトリミノ回転 (Next Turn)
+            # 4: 5番目 X軸移動 (Next Turn)
             action = next_actions[index]
             # step, step_v2 により報酬計算
             reward = self.reward_func(curr_backboard, action, curr_shape_class)
@@ -1206,15 +1256,14 @@ class Block_Controller(object):
             #======predict max_a Q(s_(t+1),a)======
             #if use double dqn, predicted by main model
             if self.double_dqn:
-                # 画面ボードデータをコピーして 指定X座標にテトリミノを固定しその画面ボードを返す
+                # 画面ボードデータをコピーして 指定座標にテトリミノを配置し落下させた画面ボードとy座標を返す
                 next_backboard, drop_y  = self.getBoard(curr_backboard, curr_shape_class, action[1], action[0], action[2])
                 #画面ボードで テトリミノ回転状態 に落下させたときの次の状態一覧を作成
                 next2_steps = self.get_next_func(next_backboard, next_piece_id, next_shape_class)
                 # 次の状態一覧の action と states で配列化
                 next2_actions, next2_states = zip(*next2_steps.items())
                 # next_states のテンソルを連結
-                next2_states = torch.stack(next2_states)
-                ## GPU 使用できるときは使う
+                next2_states = torch.stack(next2_states)                ## GPU 使用できるときは使う
                 if torch.cuda.is_available():
                     next2_states = next2_states.cuda()
                 ##########################
@@ -1234,10 +1283,10 @@ class Block_Controller(object):
             # Target Next 有効時
             #if use target net, predicted by target model
             elif self.target_net:
-                # 画面ボードデータをコピーして 指定X座標にテトリミノを固定しその画面ボードを返す
+                # 画面ボードデータをコピーして 指定座標にテトリミノを配置し落下させた画面ボードとy座標を返す
                 next_backboard, drop_y  = self.getBoard(curr_backboard, curr_shape_class, action[1], action[0], action[2])
                 #画面ボードで テトリミノ回転状態 に落下させたときの次の状態一覧を作成
-                next2_steps =self.get_next_func(next_backboard,next_piece_id,next_shape_class)
+                next2_steps =self.get_next_func(next_backboard, next_piece_id, next_shape_class)
                 # 次の状態一覧の action と states で配列化
                 next2_actions, next2_states = zip(*next2_steps.items())
                 # next_states のテンソルを連結
@@ -1245,6 +1294,9 @@ class Block_Controller(object):
                 ## GPU 使用できるときは使う
                 if torch.cuda.is_available():
                     next2_states = next2_states.cuda()
+                ##########################
+                # モデルの学習実施
+                ##########################
                 self.target_model.train()
                 # テンソルの勾配の計算を不可とする
                 with torch.no_grad():
@@ -1256,10 +1308,10 @@ class Block_Controller(object):
                 
             #if not use target net,predicted by main model
             else:
-                # 画面ボードデータをコピーして 指定X座標にテトリミノを固定しその画面ボードを返す
+                # 画面ボードデータをコピーして 指定座標にテトリミノを配置し落下させた画面ボードとy座標を返す
                 next_backboard, drop_y  = self.getBoard(curr_backboard, curr_shape_class, action[1], action[0], action[2])
                 #画面ボードで テトリミノ回転状態 に落下させたときの次の状態一覧を作成
-                next2_steps =self.get_next_func(next_backboard,next_piece_id,next_shape_class)
+                next2_steps =self.get_next_func(next_backboard, next_piece_id, next_shape_class)
                 # 次の状態一覧の action と states で配列化
                 next2_actions, next2_states = zip(*next2_steps.items())
                 # 次の状態を index で指定し取得
@@ -1299,7 +1351,7 @@ class Block_Controller(object):
             
             #=======================================
             #self.replay_memory.append([next_state, reward, next2_state,done])
-            self.episode_memory.append([next_state, reward, next2_state,done])
+            self.episode_memory.append([next_state, reward, next2_state, done])
             # 優先順位つき経験学習有効ならば
             if self.prioritized_replay:
                 # 
@@ -1314,21 +1366,40 @@ class Block_Controller(object):
             # third_y, forth_direction, fifth_x
             #self.skip_drop = [-1, -1, -1]
         
+            # テトリミノ回転
             nextMove["strategy"]["direction"] = action[1]
+            # 横方向
             nextMove["strategy"]["x"] = action[0]
-            # Drop Down:1 Move Down:0
+            ###########
+            # Drop Down 落下の場合
             if action[2] == -1 and action[3] == -1 and action[4] == -1:
+                # Drop Down 落下
                 nextMove["strategy"]["y_operation"] = 1
+                # Move Down 降下数
+                nextMove["strategy"]["y_moveblocknum"] = 1
                 # 前のターンで Drop をスキップしていたか？ (-1: していない, それ以外: していた)
                 self.skip_drop = [-1, -1, -1]
+            ###########
+            # Move Down 降下の場合
+            else:
+                # Move Down 降下
+                nextMove["strategy"]["y_operation"] = 0
+                # Move Down 降下 数
+                nextMove["strategy"]["y_moveblocknum"] = action[2]
+                # 前のターンで Drop をスキップしていたか？ (-1: していない, それ以外: していた)
+                # third_y, forth_direction, fifth_x
+                self.skip_drop = [action[2], action[3], action[4]]
+                # debug
+                if self.debug_flag_move_down == 1:
+                    print("Move Down: ", "(", action[0], ",", action[2], ")")
 
-            # ブロック落とし数
-            nextMove["strategy"]["y_moveblocknum"] = action[2]
-
+            ##########
+            # 学習終了処理
+            ##########
             # 1ゲーム(EPOCH)の上限テトリミノ数を超えたらリセットフラグを立てる
             if self.tetrominoes > self.max_tetrominoes:
                 nextMove["option"]["force_reset_field"] = True
-            # STATE = NEXT へ
+            # STATE = next_state 代入
             self.state = next_state
 
         ####################
@@ -1344,6 +1415,11 @@ class Block_Controller(object):
             # 最大値の index 取得
             index = torch.argmax(predictions).item()
             # 次の action を index を元に決定
+            # 0: 2番目 X軸移動
+            # 1: 1番目 テトリミノ回転
+            # 2: 3番目 Y軸降下 (-1: で Drop)
+            # 3: 4番目 テトリミノ回転 (Next Turn)
+            # 4: 5番目 X軸移動 (Next Turn)
             action = next_actions[index]
 
             ###############################################
@@ -1356,14 +1432,29 @@ class Block_Controller(object):
             nextMove["strategy"]["direction"] = action[1]
             # 横方向
             nextMove["strategy"]["x"] = action[0]
-            # Drop Down:1 Move Down:0
+            ###########
+            # Drop Down 落下の場合
             if action[2] == -1 and action[3] == -1 and action[4] == -1:
+                # Drop Down 落下
                 nextMove["strategy"]["y_operation"] = 1
+                # Move Down 降下数
+                nextMove["strategy"]["y_moveblocknum"] = 1
                 # 前のターンで Drop をスキップしていたか？ (-1: していない, それ以外: していた)
                 self.skip_drop = [-1, -1, -1]
-            # Move Down 数
-            nextMove["strategy"]["y_moveblocknum"] = action[2]
-
+            ###########
+            # Move Down 降下の場合
+            else:
+                # Move Down 降下
+                nextMove["strategy"]["y_operation"] = 0
+                # Move Down 降下 数
+                nextMove["strategy"]["y_moveblocknum"] = action[2]
+                # 前のターンで Drop をスキップしていたか？ (-1: していない, それ以外: していた)
+                # third_y, forth_direction, fifth_x
+                self.skip_drop = [action[2], action[3], action[4]]
+                # debug
+                if self.debug_flag_move_down == 1:
+                    print("Move Down: ", "(", action[0], ",", action[2], ")")
+        #終了
         return nextMove
 
 
@@ -1397,7 +1488,7 @@ class Block_Controller(object):
         return coordArray
 
     ####################################
-    # 画面ボードデータをコピーして指定座標から落下させたところにテトリミノを固定しその画面ボードを返す
+    # 画面ボードデータをコピーして指定座標にテトリミノを配置し落下させた画面ボードとy座標を返す
     # board_backboard: 現状画面ボード
     # Shape_class: テトリミノ現/予告リスト
     # direction: テトリミノ回転方向
