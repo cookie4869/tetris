@@ -24,7 +24,7 @@ class PRIORITIZED_EXPERIENCE_REPLAY():
         self.alpha = alpha
         #
         self.beta = beta
-        #
+        # Rank モードならランク付け
         self.mode = mode
         #
         self.gamma = gamma
@@ -45,7 +45,7 @@ class PRIORITIZED_EXPERIENCE_REPLAY():
             self.replay_priority_queue.append(max_priority) 
 
     ####################################
-    # alpha をかけて正規化
+    # alpha 乗して正規化 (rank_based_priority で使用)
     ####################################
     def normalize(self,replay_priority):
         replay_priority = replay_priority ** self.alpha
@@ -54,24 +54,29 @@ class PRIORITIZED_EXPERIENCE_REPLAY():
         return replay_priority
     
     ####################################
-    # 
+    # リプレイ優先度の決定 優先度低いものを 1/n にする (mode "rank")
     ####################################
     def rank_based_priority(self,replay_priority):
         replay_priority_index = np.argsort(replay_priority)[::-1]
+        # ランクごとに優先度を 1/n にする
         for i,index in enumerate(replay_priority_index):
             replay_priority[index] =  1.0 / (i+1.0)
+        # α乗して正規化
         replay_priority = self.normalize(replay_priority)
         return replay_priority
         
     ####################################
-    # 
+    # リプレイメモリの batch を優先度に基づきサンプリング
     ####################################
     def sampling(self,replay_memory,batch_size):
+        # リプレイ優先度取得
         replay_priority = np.array(copy.copy(self.replay_priority_queue))
         replay_priority = replay_priority[:len(replay_memory)]
         if self.mode=="rank":
             replay_priority = self.rank_based_priority(replay_priority)
-        replay_index = self.replay_index[:len(replay_priority)]            
+        # リプレイ index 取得
+        replay_index = self.replay_index[:len(replay_priority)]
+        # 優先順位つきランダム取得
         replay_batch_index = np.random.choice(replay_index,batch_size,p=replay_priority)
         try:
             replay_batch = deque([replay_memory[j] for j in replay_batch_index])
@@ -80,7 +85,7 @@ class PRIORITIZED_EXPERIENCE_REPLAY():
             print(len(replay_memory))
         
         N = len(replay_priority)
-        
+        # リプレイ優先度から重みづけ計算
         for i in range(len(replay_priority)):
             self.weights[i] = (N*replay_priority[i])**(-self.beta)
         max_weights = max(self.weights)
@@ -88,20 +93,24 @@ class PRIORITIZED_EXPERIENCE_REPLAY():
         return replay_batch,replay_batch_index
     
     ####################################
-    # 
+    # 報酬から優先度更新
     ####################################
     def update_priority(self,replay_batch_index,reward_batch,q_batch,next_q_batch):
         memo = []
         weights = []
         for i,index in enumerate(replay_batch_index):
+            # 重みづけに リプレイバッチに抽出された index 追加
             weights.append(self.weights[index])
             if index in memo:
                 continue
+            # index 新規なら memo に追加
             memo.append(index )
+            # 勾配計算なしで誤差計算 (割引率γおりこみ)
             with torch.no_grad():
                 #print(self.gamma *next_q_batch[i] - q_batch[i])
                 TD_error = float(reward_batch[i] + self.gamma *next_q_batch[i] - q_batch[i])
             self.replay_priority_queue[index] = abs(TD_error)
+        # Numpy にもどす
         weights  = np.array(weights,dtype=np.float64)
         #print(self.replay_priority_queue)
         return torch.from_numpy(weights)

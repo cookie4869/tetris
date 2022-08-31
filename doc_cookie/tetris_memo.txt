@@ -1,0 +1,31 @@
+■コマンド類
+python start.py -m train -d 1 -l 2 -t -1
+python start.py -m predict -l 2 --predict_weight outputs/2022-08-16-23-07-28/trained_model/tetris_epoch192_score176400.pt
+tensorboard --logdir='
+
+git config --global user.name "cookie4869"
+git add outputs
+git commit -am 'Add outputs'
+git push origin cookie_branch
+
+■スコア履歴
+2022-08-01-00-09-33 default DQN	140000
+2022-08-08-23-27-26 default MLP	50400
+2022-08-08-00-07-02 MLP Reward 100/300/1000/3000/5000	12100	
+2022-08-15-01-30-51 形状ペナ 1/1000, 高さペナ 8以上 142400
+2022-08-17-08-15-23 epsilon 3% 割引率 0.99 Tetris 2700 point
+2022-08-17-20-41-25 現状でいろいろ調整した結果
+2022-08-18-10-22-46 EPOCH 200 割引率 0.9 高さペナ8 以上 左端
+
+■Status 分解
+next_steps[(x0, direction0)] = reshape_backboard
+next_actions, next_states = zip(*next_steps.items())
+action = next_actions[index]
+	reward_func (=step_v2, step)にいく
+	そこで分解され行動設定となる
+
+	getBoard にいく
+
+	nextMove で指定 (学習と推論2つ)
+next2_actions, next2_states = zip(*next2_steps.items())
+	の next2_actions は未使用

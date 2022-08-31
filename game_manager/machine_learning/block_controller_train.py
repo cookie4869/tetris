@@ -296,9 +296,9 @@ class Block_Controller(object):
             self.lr_step_size = cfg["train"]["lr_step_size"]
             # 学習率γ設定　...  Step Size 進んだ EPOCH で gammma が学習率に乗算される
             self.lr_gamma = cfg["train"]["lr_gamma"]
-            # スケジューラ
+            # 学習率スケジューラ
             self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=self.lr_step_size , gamma=self.lr_gamma)
-        # 損失算出
+        # 誤差関数 - MSELoss 平均二乗誤差
         self.criterion = nn.MSELoss()
 
         ####各パラメータ初期化
@@ -354,6 +354,7 @@ class Block_Controller(object):
         #Target_net ON ならば
         if self.target_net:
             print("set target network...")
+            # 機械学習モデル複製
             self.target_model = copy.deepcopy(self.model)
             self.target_copy_intarval = cfg["train"]["target_copy_intarval"]
 
@@ -380,6 +381,7 @@ class Block_Controller(object):
     def stack_replay_memory(self):
         if self.mode=="train" or self.mode=="train_sample" or self.mode=="train_sample2":
             self.score += self.score_list[5]
+
             self.episode_memory[-1][1] += self.penalty
             self.episode_memory[-1][3] = True  #store False to done lists.
             self.epoch_reward += self.penalty
@@ -402,6 +404,9 @@ class Block_Controller(object):
             # リセット時にスコア計算し episode memory に penalty 追加
             self.stack_replay_memory()
 
+            ##############################
+            ## ログ表示
+            ##############################
             # リプレイメモリがいっぱいでないなら、
             if len(self.replay_memory) < self.replay_memory_size / 10:
                 print("================pass================")
@@ -418,6 +423,7 @@ class Block_Controller(object):
                     batch, replay_batch_index = self.PER.sampling(self.replay_memory,self.batch_size)
                 # そうでないなら
                 else:
+                    # batch 確率的勾配降下法における、全パラメータのうちランダム抽出して勾配を求めるパラメータの数 batch_size など
                     batch = sample(self.replay_memory, min(len(self.replay_memory),self.batch_size))
                     
 
@@ -429,7 +435,9 @@ class Block_Controller(object):
 
                 done_batch = torch.from_numpy(np.array(done_batch)[:, None])
 
+                ###########################
                 # 順伝搬し Q 値を取得 (model の __call__ ≒ forward)
+                ###########################
                 #max_next_state_batch = torch.stack(tuple(state for state in max_next_state_batch))
                 q_values = self.model(state_batch)
                 
@@ -444,8 +452,9 @@ class Block_Controller(object):
                     # インスタンスを推論モードに切り替え
                     self.target_model.eval()
                     #======predict Q(S_t+1 max_a Q(s_(t+1),a))======
-                    # テンソルの勾配の計算を不可
+                    # テンソルの勾配の計算を不可とする
                     with torch.no_grad():
+                        # モデルから次の q 値を求める
                         next_prediction_batch = self.target_model(next_state_batch)
                 else:
                     # インスタンスを推論モードに切り替え
@@ -473,11 +482,15 @@ class Block_Controller(object):
                             zip(done_batch,reward_batch, next_prediction_batch)))[:, None]
                 # 最適化対象のすべてのテンソルの勾配を 0 にする (逆伝搬backward 前に必須)
                 self.optimizer.zero_grad()
+                #########################
+                ## 学習実施 - 逆伝搬
+                #########################
                 # 優先順位つき経験学習の場合
                 if self.prioritized_replay:
-                    # 
+                    # 優先度の更新と重みづけ取得
                     loss_weights = self.PER.update_priority(replay_batch_index,reward_batch,q_values,next_prediction_batch)
                     #print(loss_weights *nn.functional.mse_loss(q_values, y_batch))
+                    # 誤差関数と重みづけ計算
                     loss = (loss_weights *self.criterion(q_values, y_batch)).mean()
                     #loss = self.criterion(q_values, y_batch)
                     
@@ -489,8 +502,9 @@ class Block_Controller(object):
                     loss.backward()
                 # weight を学習率に基づき更新
                 self.optimizer.step()
-                
+                # SGD の場合
                 if self.scheduler!=None:
+                    # 学習率更新
                     self.scheduler.step()
 
                 ###################################
@@ -1417,7 +1431,7 @@ class Block_Controller(object):
             self.episode_memory.append([next_state, reward, next2_state, done])
             # 優先順位つき経験学習有効ならば
             if self.prioritized_replay:
-                # 
+                # キューにリプレイ用の情報を格納していく
                 self.PER.store()
             
             #self.replay_memory.append([self.state, reward, next_state,done])
@@ -1482,7 +1496,7 @@ class Block_Controller(object):
                 index_list_to_q = {}
                 ######################
                 # 次の予測を上位4つ実施, 1番目から4番目まで予測
-                index_list, index_list_to_q, next_actions = self.get_predictions(GameStatus, next_steps, 5, 1, 4, index_list, index_list_to_q, -9999)
+                index_list, index_list_to_q, next_actions = self.get_predictions(GameStatus, next_steps, 5, 1, 4, index_list, index_list_to_q, -60000)
                 #print(index_list_to_q)
                 #print("max")
 
