@@ -1,7 +1,10 @@
 common:
-  ft_weight: outputs/2022-08-17-08-15-23/trained_model/tetris_epoch28_score179300.pt # 以前の学習結果を利用する場合のファイル 
-  #outputs/2022-08-17-20-41-25/trained_model/tetris_epoch949_score203900.pt 
+  ft_weight: outputs/2022-08-31-08-05-53/trained_model/tetris_epoch1701_score189000.pt
+  #outputs/2022-08-31-08-05-53/trained_model/tetris_epoch1701_score189000.pt
+  #outputs/2022-08-17-08-15-23/trained_model/tetris_epoch28_score179300.pt 
+  #outputs/2022-08-17-20-41-25/trained_model/tetris_epoch949_score203900.pt # 以前の学習結果を利用する場合のファイル 
   log_path: tensorboard
+  time_disp: True
 model:
   name: DQN # 学習方式 (MLP DQN
   finetune: True # 以前の学習結果を利用する  
@@ -13,7 +16,7 @@ train:
   lr_gamma: 0.1 # SGD 用 ... Step Size 進んだ EPOCH で gammma が学習率に乗算される
   lr_momentum: 0.99 # SGD 用 ... モーメンタム... 今までの移動とこれから動くべき移動の平均をとり振動を防ぐための関数
   lr_step_size: 1000 # SGD 用 ... step size 学習率更新タイミングの EPOCH 数
-  num_epoch: 10000 # 試行回数
+  num_epoch: 100000 # 試行回数
   num_decay_epochs: 3500 # ε収束させる試行回数
   initial_epsilon: 1.0e-3 # ε... 学習が局所解にならないように乱数で動かして最適値する。学習初期は 1, 初期値 Fine Tune の場合は小さめに
   final_epsilon: 1.0e-3 # 上記εを漸減させたときの最終値
@@ -38,13 +41,17 @@ train:
   reward_weight: # 形状報酬の配分
     - 0.00005 #1 #bampiness 
     - 0.00002 #1 #max height
-    - 0.0001 #1 #hole_num
+    - 0.001 #1 #hole_num
   bumpiness_left_side_relax: 8 # 左端のでこぼこだけどこまで許容するか
   max_height_relax: 7 # 高さをどこまで許容するか
-  tetris_fill_reward: 0.2 # 左端以外を埋める報酬率 #DQN限定
+  tetris_fill_reward: 0.1 # 左端以外を埋める報酬率 #DQN限定
   tetris_fill_height: 6 # 左端以外を埋める報酬有効化 #DQN限定
-  move_down_flag: 1 # Move Down 有効化
-  predict_next_flag: 1 # 次のテトリミノ予測有効化
+  move_down_flag: 0 # Move Down 有効化
+  predict_next_flag: 1 # 次のテトリミノ予測有効化 # 20220831 無効
+  predict_next_num: 4 # 次のテトリミノ予測数
+  predict_next_steps: 5 #  1つの手番で候補手をいくつ探すか
+  predict_next_num_train: 2 # 次のテトリミノ予測有効化 (学習時)
+  predict_next_steps_train: 3 #  1つの手番で候補手をいくつ探すか (学習時)
 tetris:
   board_height: 22
   board_width: 10
@@ -55,4 +62,4 @@ tetris:
     - 700
     - 1300
     - -500
-  max_tetrominoes: 3000
+  max_tetrominoes: 200

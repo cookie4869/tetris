@@ -4,7 +4,7 @@ common:
   #outputs/2022-08-17-08-15-23/trained_model/tetris_epoch28_score179300.pt 
   #outputs/2022-08-17-20-41-25/trained_model/tetris_epoch949_score203900.pt # 以前の学習結果を利用する場合のファイル 
   log_path: tensorboard
-  time_disp: True
+  time_disp: False
 model:
   name: DQN # 学習方式 (MLP DQN
   finetune: True # 以前の学習結果を利用する  
