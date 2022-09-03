@@ -193,17 +193,6 @@ class Block_Controller(object):
             self.reward_func = self.step
             # 報酬関連規定
             self.reward_weight = cfg["train"]["reward_weight"]
-            
-            if 'bumpiness_left_side_relax' in cfg["train"]:
-                self.bumpiness_left_side_relax = cfg["train"]["bumpiness_left_side_relax"]
-            else:
-                self.bumpiness_left_side_relax = 0
-
-            if 'max_height_relax' in cfg["train"]:
-                self.max_height_relax = cfg["train"]["max_height_relax"]
-            else:
-                self.max_height_relax = 0
-
 
         # DQN の場合
         elif cfg["model"]["name"]=="DQN":
@@ -219,16 +208,6 @@ class Block_Controller(object):
             # 報酬関連規定
             self.reward_weight = cfg["train"]["reward_weight"]
             
-            if 'bumpiness_left_side_relax' in cfg["train"]:
-                self.bumpiness_left_side_relax = cfg["train"]["bumpiness_left_side_relax"]
-            else:
-                self.bumpiness_left_side_relax = 0
-                
-            if 'max_height_relax' in cfg["train"]:
-                self.max_height_relax = cfg["train"]["max_height_relax"]
-            else:
-                self.max_height_relax = 0
-
             if 'tetris_fill_reward' in cfg["train"]:
                 self.tetris_fill_reward = cfg["train"]["tetris_fill_reward"]
             else:
@@ -238,6 +217,24 @@ class Block_Controller(object):
                 self.tetris_fill_height = cfg["train"]["tetris_fill_height"]
             else:
                 self.tetris_fill_height = 0
+
+        # 共通報酬関連規定
+        if 'bumpiness_left_side_relax' in cfg["train"]:
+            self.bumpiness_left_side_relax = cfg["train"]["bumpiness_left_side_relax"]
+        else:
+            self.bumpiness_left_side_relax = 0
+            
+        if 'max_height_relax' in cfg["train"]:
+            self.max_height_relax = cfg["train"]["max_height_relax"]
+        else:
+            self.max_height_relax = 0
+
+        if 'height_line_reward' in cfg["train"]:
+            self.height_line_reward = cfg["train"]["height_line_reward"]
+        else:
+            self.height_line_reward = 0
+
+
 
         # debug
         print("bumpiness_left:", self.bumpiness_left_side_relax)
@@ -612,8 +609,8 @@ class Block_Controller(object):
     def reset_state(self):
         ## 学習の場合
         if self.mode=="train" or self.mode=="train_sample" or self.mode=="train_sample2": 
-            ## 最高点なら保存
-            if self.score > self.max_score:
+            ## 最高点,500 epoch おきに保存
+            if self.score > self.max_score or self.epoch % 500 == 0:
                 torch.save(self.model, "{}/tetris_epoch{}_score{}.pt".format(self.weight_dir,self.epoch,self.score))
                 self.max_score  =  self.score
                 torch.save(self.model,self.best_weight)
@@ -756,8 +753,8 @@ class Block_Controller(object):
             if self.get_line_right_fill(reshape_board, sum_, i):
                 reward +=1
             ## 1段目は2倍
-            #if i==1:
-            #    reward +=1
+            if i==1:
+                reward +=5
 
         return reward
 
@@ -1176,7 +1173,7 @@ class Block_Controller(object):
         tetris_reward = self.get_tetris_fill_reward(reshape_board)
         lines_cleared, reshape_board = self.check_cleared_rows(reshape_board)
         ## 報酬の計算
-        reward = self.reward_list[lines_cleared] 
+        reward = self.reward_list[lines_cleared] * (1 + (self.height - max(0,max_height))/self.height_line_reward) 
         # 継続報酬
         #reward += 0.01
         # 形状の罰報酬
@@ -1190,8 +1187,10 @@ class Block_Controller(object):
 
         # スコア計算
         self.score += self.score_list[lines_cleared]
+        # 消去ラインカウント
         self.cleared_lines += lines_cleared
         self.cleared_col[lines_cleared] += 1
+        # テトリミノ数カウント増やす
         self.tetrominoes += 1
         return reward
 
