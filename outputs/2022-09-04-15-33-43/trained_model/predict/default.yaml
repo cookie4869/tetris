@@ -1,11 +1,9 @@
 common:
-  # Lv3 高さ比例ライン消し報酬,左はし空け 11段0.8, 高さ緩和 5, 穴の上のブロック積ペナルティ0.005 (穴掘りOK)
-  ft_weight: outputs/2022-09-04-19-37-38/trained_model/tetris_epoch520_score57800.pt
-  # Lv3 高さ比例ライン消し報酬,左はし空け 11段0.8, 高さ緩和 5, 穴の上のブロック積ペナルティ0.01
+  # Lv3 高さ比例ライン消し報酬,左はし空け 11段0.8, 高さ緩和 5
   #ft_weight: outputs/2022-09-04-15-33-43/trained_model/tetris_epoch1392_score103500.pt
   # Lv3 高さ比例ライン消し報酬,左はし空け 9段0.8, 高さ緩和 12
   #ft_weight: outputs/2022-09-03-19-31-58/trained_model/tetris_epoch9085_score46700.pt
-  # Lv3 高さ比例ライン消し報酬,左はし空け 12段0.4, 高さ緩和 12 強い
+  # Lv3 高さ比例ライン消し報酬,左はし空け 12段0.4, 高さ緩和 12
   #ft_weight: outputs/2022-09-03-13-05-06/trained_model/tetris_epoch6390_score16800.pt
   # Lv3 高さ比例ライン消し報酬,左はし空け 12段0.4, 高さ緩和 12
   #ft_weight: outputs/2022-09-03-11-40-46/trained_model/tetris_epoch754_score17400.pt
@@ -45,9 +43,9 @@ train:
   multi_step_num: 3
   reward_list: #These parameter are not normalized. 消去報酬の配分
     - 0  #survival
-    - 500 #0 #1block
-    - 1500 #2block
-    - 4500 #3block
+    - 800 #0 #1block
+    - 2000 #2block
+    - 6000 #3block
     - 10000 #4block
     - -10000 #game over
   height_line_reward: 4 #低いところの消去ほど有効とする設定(10000 くらいでほぼ無効 大きい値ほど報酬小さい)
@@ -58,12 +56,12 @@ train:
   bumpiness_left_side_relax: 10 # 左端のでこぼこだけどこまで許容するか
   max_height_relax: 5 # 高さをどこまで許容するか
 
-  tetris_fill_reward: 0.1 # 左端以外を埋める報酬率 #DQN限定 #DQN限定
+  tetris_fill_reward: 0.4 # 左端以外を埋める報酬率 #DQN限定 #DQN限定
   tetris_fill_height: 11 # 左端以外を埋める報酬有効化上限高さ #DQN限定
 
   hole_top_limit_reward: 0.005  # 穴の上の積み上げペナルティ #DQN限定
   hole_top_limit: 1 # 穴の上の積み上げペナルティ下限 (-1: 無効)
-  hole_top_limit_height: 0 # 穴の上の積み上げペナルティ 穴の位置が左記の高さより高いときのみ
+  hole_top_limit_height: 4 # 穴の上の積み上げペナルティ 穴の位置が左記の高さより高いときのみ
 
   move_down_flag: 1 # Move Down 有効化
 
