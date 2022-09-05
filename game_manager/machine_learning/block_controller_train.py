@@ -212,33 +212,52 @@ class Block_Controller(object):
                 self.tetris_fill_reward = cfg["train"]["tetris_fill_reward"]
             else:
                 self.tetris_fill_reward = 0
+            print("tetris_fill_reward:", self.tetris_fill_reward)
 
             if 'tetris_fill_height' in cfg["train"]:
                 self.tetris_fill_height = cfg["train"]["tetris_fill_height"]
             else:
                 self.tetris_fill_height = 0
+            print("tetris_fill_height:", self.tetris_fill_height)
+
+            if 'height_line_reward' in cfg["train"]:
+                self.height_line_reward = cfg["train"]["height_line_reward"]
+            else:
+                self.height_line_reward = 0
+            print("height_line_reward:", self.height_line_reward)
+    
+            if 'hole_top_limit_reward' in cfg["train"]:
+                self.hole_top_limit_reward = cfg["train"]["hole_top_limit_reward"]
+            else:
+                self.hole_top_limit_reward = 0
+            print("hole_top_limit_reward:", self.hole_top_limit_reward)
+    
+            if 'hole_top_limit' in cfg["train"]:
+                self.hole_top_limit = cfg["train"]["hole_top_limit"]
+            else:
+                self.hole_top_limit = -1
+            print("hole_top_limit:", self.hole_top_limit)
+    
+            if 'hole_top_limit_height' in cfg["train"]:
+                self.hole_top_limit_height = cfg["train"]["hole_top_limit_height"]
+            else:
+                self.hole_top_limit_height = 0
+            print("hole_top_limit_height:", self.hole_top_limit_height)
 
         # 共通報酬関連規定
         if 'bumpiness_left_side_relax' in cfg["train"]:
             self.bumpiness_left_side_relax = cfg["train"]["bumpiness_left_side_relax"]
         else:
             self.bumpiness_left_side_relax = 0
+        print("bumpiness_left_side_relax:", self.bumpiness_left_side_relax)
             
         if 'max_height_relax' in cfg["train"]:
             self.max_height_relax = cfg["train"]["max_height_relax"]
         else:
             self.max_height_relax = 0
-
-        if 'height_line_reward' in cfg["train"]:
-            self.height_line_reward = cfg["train"]["height_line_reward"]
-        else:
-            self.height_line_reward = 0
+        print("max_height_relax:", self.max_height_relax)
 
 
-
-        # debug
-        print("bumpiness_left:", self.bumpiness_left_side_relax)
-        print("max_height:", self.max_height_relax)
 
         ####################
         # 推論の場合 推論ウェイトを torch　で読み込み model に入れる。
@@ -409,8 +428,10 @@ class Block_Controller(object):
             #
             if self.multi_step_learning:
                 self.episode_memory = self.MSL.arrange(self.episode_memory)
-                
+
+            # 経験学習のために episode_memory 追加
             self.replay_memory.extend(self.episode_memory)
+            # 容量超えたら削除
             self.episode_memory = deque(maxlen=self.max_episode_size)
         else:
             pass
@@ -449,6 +470,7 @@ class Block_Controller(object):
                     
 
                 # batch から各情報を引き出す
+                # (episode memory の並び)
                 state_batch, reward_batch, next_state_batch, done_batch = zip(*batch)
                 state_batch = torch.stack(tuple(state for state in state_batch))
                 reward_batch = torch.from_numpy(np.array(reward_batch, dtype=np.float32)[:, None])
@@ -468,6 +490,7 @@ class Block_Controller(object):
                 if self.target_net:
                     if self.epoch %self.target_copy_intarval==0 and self.epoch>0:
                         print("target_net update...")
+                        # self.target_copy_intarval ごとに best_weight を target に切り替え
                         self.target_model = torch.load(self.best_weight)
                         #self.target_model = copy.copy(self.model)
                     # インスタンスを推論モードに切り替え
@@ -475,14 +498,14 @@ class Block_Controller(object):
                     #======predict Q(S_t+1 max_a Q(s_(t+1),a))======
                     # テンソルの勾配の計算を不可とする
                     with torch.no_grad():
-                        # モデルから次の q 値を求める
+                        # 確率的勾配降下法における batch から "ターゲット" モデルでの q 値を求める
                         next_prediction_batch = self.target_model(next_state_batch)
                 else:
                     # インスタンスを推論モードに切り替え
                     self.model.eval()
                     # テンソルの勾配の計算を不可とする
                     with torch.no_grad():
-                        # 順伝搬し Q 値を取得 (model の __call__ ≒ forward)
+                        # 確率的勾配降下法における batch を順伝搬し Q 値を取得 (model の __call__ ≒ forward)
                         next_prediction_batch = self.model(next_state_batch)
 
                 ##########################
@@ -498,6 +521,9 @@ class Block_Controller(object):
 
                 # Multi Step lerning でない場合
                 else:
+                    # done_batch, reward_bach, next_prediction_batch(Target net など比較対象 batch)
+                    # をそれぞれとりだし done が True なら reward, False (Gameover なら reward + gammma * prediction)
+                    # を y_batchとする (gamma は割引率)
                     y_batch = torch.cat(
                         tuple(reward if done[0] else reward + self.gamma * prediction for done ,reward, prediction in
                             zip(done_batch,reward_batch, next_prediction_batch)))[:, None]
@@ -511,7 +537,7 @@ class Block_Controller(object):
                     # 優先度の更新と重みづけ取得
                     loss_weights = self.PER.update_priority(replay_batch_index,reward_batch,q_values,next_prediction_batch)
                     #print(loss_weights *nn.functional.mse_loss(q_values, y_batch))
-                    # 誤差関数と重みづけ計算
+                    # 誤差関数と重みづけ計算 (q_values が現状 モデル結果, y_batch が比較対象[Target net])
                     loss = (loss_weights *self.criterion(q_values, y_batch)).mean()
                     #loss = self.criterion(q_values, y_batch)
                     
@@ -658,6 +684,10 @@ class Block_Controller(object):
         heights = self.height - invert_heights
         # 高さの合計をとる (返り値用)
         total_height = np.sum(heights)
+        # 最も高いところをとる (返り値用)
+        max_height = np.max(heights)
+        # 最も低いところをとる (返り値用)
+        min_height = np.min(heights)
 
         # 右端列を削った 高さ配列
         #currs = heights[:-1]
@@ -675,20 +705,65 @@ class Block_Controller(object):
 
         # 差分の絶対値を合計してでこぼこ度とする
         total_bumpiness = np.sum(diffs)
-        return total_bumpiness, total_height
+        return total_bumpiness, total_height, max_height, min_height
 
     ####################################
     #各列の穴の個数を数える
     ####################################
-    def get_holes(self, reshape_board):
+    def get_holes(self, reshape_board, min_height):
+        # 穴の数
         num_holes = 0
+        # 穴の上の積み上げペナルティ
+        hole_top_penalty = 0
+        # 地面の高さ list
+        highest_grounds = [-1] * self.width
+        # 最も高い穴の list
+        highest_holes = [-1] * self.width
+        # 列ごとに切り出し
         for i in range(self.width):
+            # 列取得
             col = reshape_board[:,i]
-            row = 0
-            while row < self.height and col[row] == 0:
-                row += 1
-            num_holes += len([x for x in col[row + 1:] if x == 0])
-        return num_holes
+            ground_level = 0
+            # 上の行から 0(ブロックなし) をみつけていく, ground_level が今の列の最上層
+            while ground_level < self.height and col[ground_level] == 0:
+                ground_level += 1
+            # その行以降の穴のlist を作り
+            cols_holes = []
+            for y, state in enumerate(col[ground_level + 1:]):
+                # 穴のある場所をlistにする, list値として穴の位置をいれる
+                if state == 0:
+                    #num_holes += 1
+                    cols_holes.append(self.height - (ground_level + 1 + y) - 1)
+            ## 旧 1 liner 方式のカウント
+            #cols_holes = [x for x in col[ground_level + 1:] if x == 0]
+            # list をカウントして穴の数をカウント
+            num_holes += len(cols_holes)
+
+            # 地面の高さ配列
+            highest_grounds[i] = self.height - ground_level - 1
+
+            # 最も高い穴の位置配列
+            if len(cols_holes) > 0:
+                highest_holes[i] = cols_holes[0]
+            else:
+                highest_holes[i] = -1
+
+        # 全体の最下層より1行下の穴の位置をチェック
+        if min_height > 0:
+            max_highest_hole = max(highest_holes)
+            # 列ごとに切り出し
+            for i in range(self.width):
+                # 最も高い位置の穴の列の場合
+                if highest_holes[i] == max_highest_hole:
+                    # 穴の位置がhole_top_limit_height以上で穴の上の地面が高いなら Penalty
+                    if highest_holes[i] > self.hole_top_limit_height and \
+                           highest_grounds[i] > highest_holes[i] + self.hole_top_limit:
+                        hole_top_penalty += highest_grounds[i] - (highest_holes[i] + self.hole_top_limit)
+            #print(['{:02}'.format(n) for n in highest_grounds])
+            #print(['{:02}'.format(n) for n in highest_holes])
+            #print(hole_top_penalty)
+            #print("==")
+        return num_holes, hole_top_penalty
 
     ####################################
     # 現状状態の各種パラメータ取得 (MLP
@@ -697,9 +772,9 @@ class Block_Controller(object):
         #削除された行の報酬
         lines_cleared, reshape_board = self.check_cleared_rows(reshape_board)
         # 穴の数
-        holes = self.get_holes(reshape_board)
+        holes, _ = self.get_holes(reshape_board, -1)
         # でこぼこの数
-        bumpiness, height = self.get_bumpiness_and_height(reshape_board)
+        bumpiness, height, max_height, min_height = self.get_bumpiness_and_height(reshape_board)
 
         return torch.FloatTensor([lines_cleared, holes, bumpiness, height])
 
@@ -707,18 +782,19 @@ class Block_Controller(object):
     # 現状状態の各種パラメータ取得　高さ付き 今は使っていない
     ####################################
     def get_state_properties_v2(self, reshape_board):
-        #削除された行の報酬
+        # 削除された行の報酬
         lines_cleared, reshape_board = self.check_cleared_rows(reshape_board)
-        #穴の数
-        holes = self.get_holes(reshape_board)
-        #でこぼこの数
-        bumpiness, height = self.get_bumpiness_and_height(reshape_board)
+        # 穴の数
+        holes, _ = self.get_holes(reshape_board, -1)
+        # でこぼこの数
+        bumpiness, height, max_row, min_height = self.get_bumpiness_and_height(reshape_board)
         # 最大高さ
-        max_row = self.get_max_height(reshape_board)
-        return torch.FloatTensor([lines_cleared, holes, bumpiness, height,max_row])
+        #max_row = self.get_max_height(reshape_board)
+        return torch.FloatTensor([lines_cleared, holes, bumpiness, height, max_row])
 
     ####################################
     # 最大の高さを取得
+    # get_bumpiness_and_height にとりこまれたので廃止
     ####################################
     def get_max_height(self, reshape_board):
         # X 軸のセルを足し算する
@@ -731,7 +807,7 @@ class Block_Controller(object):
         return self.height - row
 
     ####################################
-    # テトリス形状か?
+    # 左端以外埋まっているか？
     ####################################
     def get_tetris_fill_reward(self, reshape_board):
         # 無効の場合
@@ -1167,20 +1243,21 @@ class Block_Controller(object):
         #ボードを２次元化
         reshape_board = self.get_reshape_backboard(board)
         ## 報酬計算元の値取得
-        bampiness,height = self.get_bumpiness_and_height(reshape_board)
-        max_height = self.get_max_height(reshape_board)
-        hole_num = self.get_holes(reshape_board)
+        bampiness, height, max_height, min_height = self.get_bumpiness_and_height(reshape_board)
+        #max_height = self.get_max_height(reshape_board)
+        hole_num, hole_top_penalty = self.get_holes(reshape_board, min_height)
         tetris_reward = self.get_tetris_fill_reward(reshape_board)
         lines_cleared, reshape_board = self.check_cleared_rows(reshape_board)
         ## 報酬の計算
-        reward = self.reward_list[lines_cleared] * (1 + (self.height - max(0,max_height))/self.height_line_reward) 
+        reward = self.reward_list[lines_cleared] * (1 + (self.height - max(0,max_height))/self.height_line_reward)
         # 継続報酬
         #reward += 0.01
         # 形状の罰報酬
-        reward -= self.reward_weight[0] *bampiness 
+        reward -= self.reward_weight[0] * bampiness 
         if max_height > self.max_height_relax:
             reward -= self.reward_weight[1] * max(0,max_height)
         reward -= self.reward_weight[2] * hole_num
+        reward -= self.hole_top_limit_reward * hole_top_penalty
         reward += tetris_reward * self.tetris_fill_reward
 
         self.epoch_reward += reward 
@@ -1205,9 +1282,9 @@ class Block_Controller(object):
         #ボードを２次元化
         reshape_board = self.get_reshape_backboard(board)
         # 報酬計算元の値取得
-        bampiness,height = self.get_bumpiness_and_height(reshape_board)
-        max_height = self.get_max_height(reshape_board)
-        hole_num = self.get_holes(reshape_board)
+        bampiness, height, max_height, min_height = self.get_bumpiness_and_height(reshape_board)
+        #max_height = self.get_max_height(reshape_board)
+        hole_num, _ = self.get_holes(reshape_board, min_height)
         lines_cleared, reshape_board = self.check_cleared_rows(reshape_board)
         #### 報酬の計算
         reward = self.reward_list[lines_cleared] 
@@ -1446,6 +1523,7 @@ class Block_Controller(object):
                 self.target_model.train()
                 # テンソルの勾配の計算を不可とする
                 with torch.no_grad():
+                    # ターゲットモデルで Q値算出
                     next_predictions = self.target_model(next2_states)[:, 0]
                 # 次の index を推論の最大値とする
                 next_index = torch.argmax(next_predictions).item()
@@ -1495,6 +1573,11 @@ class Block_Controller(object):
                 next2_state = next2_states[next_index, :]
 
             #=======================================
+            # Episode Memory に
+            # next_state  次の候補第1位手
+            # reward 報酬
+            # next2_state 比較対象のモデルによる候補手 (Target net など)
+            # done Game Over flag
             #self.replay_memory.append([next_state, reward, next2_state,done])
             self.episode_memory.append([next_state, reward, next2_state, done])
             # 優先順位つき経験学習有効ならば
