@@ -9,7 +9,9 @@ common:
   #ft_weight: outputs/2022-09-03-13-05-06/trained_model/tetris_epoch6390_score16800.pt
   # Lv3 高さ比例ライン消し報酬,左はし空け 12段0.4, 高さ緩和 12
   #ft_weight: outputs/2022-09-03-11-40-46/trained_model/tetris_epoch754_score17400.pt
-  # Lv2 4回先読み最適化 強い
+  # Lv2 4回先読み先鋭化 強い
+  #ft_weight: outputs/2022-08-17-08-15-23/trained_model/tetris_epoch28_score179300.pt
+  # Lv2 4回先読み最適化
   #ft_weight: outputs/2022-08-31-08-05-53/trained_model/tetris_epoch1701_score189000.pt
   # Lv2 1回先読み最適化
   #ft_weight: outputs/2022-08-17-20-41-25/trained_model/tetris_epoch949_score203900.pt # 以前の学習結果を利用する場合のファイル 
