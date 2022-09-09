@@ -76,7 +76,7 @@ train:
   hole_top_limit: 1 # 穴の上の積み上げペナルティ下限 (-1: 無効)
   hole_top_limit_height: 0 # 穴の上の積み上げペナルティ 穴の位置が左記の高さより高いときのみ
 
-  move_down_flag: 1 # Move Down 有効化 #DQN限定
+  move_down_flag: 0 # Move Down 有効化 #DQN限定
 
   #predict_next_flag: 1 # 次のテトリミノ予測有効化 # 20220831 無効
   predict_next_num: 4 # 次のテトリミノ予測数 (0: 無効) #DQN限定
