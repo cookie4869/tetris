@@ -28,6 +28,8 @@ import yaml
 ###################################################
 class Block_Controller(object):
 
+    ####################################
+    # 起動時初期化
     # init parameter
     board_backboard = 0
     board_data_width = 0
@@ -36,6 +38,14 @@ class Block_Controller(object):
     CurrentShape_class = 0
     NextShape_class = 0
 
+    ## 第2weight
+    # 有効かどうか
+    weight2_available = False
+    # ゲーム途中の切り替えフラグ
+    weight2_enable = False
+    predict_weight2_enable_index = 0
+    predict_weight2_disable_index = 0
+
     # Debug 出力
     debug_flag_shift_rotation = 0
     debug_flag_shift_rotation_success = 0
@@ -43,6 +53,9 @@ class Block_Controller(object):
     debug_flag_drop_down = 0
     debug_flag_move_down = 1
 
+    ####################################
+    # 起動時初期化
+    ####################################
     def __init__(self):
         # init parameter
         self.mode = None
@@ -65,6 +78,15 @@ class Block_Controller(object):
     def set_parameter(self,yaml_file=None,predict_weight=None):
         self.result_warehouse = "outputs/"
         self.latest_dir = self.result_warehouse+"/latest"
+        predict_weight2 = None
+
+        ########
+        ## Config Yaml 読み込み
+        if yaml_file is None:
+            raise Exception('Please input train_yaml file.')
+        elif not os.path.exists(yaml_file):
+            raise Exception('The yaml file {} is not existed.'.format(yaml_file))
+        cfg = self.yaml_read(yaml_file)
 
         ########
         ## 学習の場合
@@ -81,15 +103,31 @@ class Block_Controller(object):
         ########
         ## 推論の場合
         else:
+            ## Config Yaml で指定の場合
+            predict_weight_cfg = True
+            if ('predict_weight' in cfg["common"]) \
+                    and (predict_weight == "outputs/latest/best_weight.pt"):
+                predict_weight = cfg["common"]["predict_weight"]
+                predict_weight_cfg = True
+            else:
+                predict_weight_cfg = False
+
             dirname = os.path.dirname(predict_weight)
             self.output_dir = dirname + "/predict/"
             os.makedirs(self.output_dir,exist_ok=True)
 
-        if yaml_file is None:
-            raise Exception('Please input train_yaml file.')
-        elif not os.path.exists(yaml_file):
-            raise Exception('The yaml file {} is not existed.'.format(yaml_file))
-        cfg = self.yaml_read(yaml_file)
+            ## 第2 model
+            self.weight2_available = False
+            self.weight2_enable = False
+            # config yaml の weight2_available が True, かつ predict_weight2 がありかつ predict_weight が指定でない場合
+            if ('weight2_available' in cfg["common"]) \
+                    and cfg["common"]["weight2_available"] \
+                    and cfg["common"]["predict_weight2"] != None \
+                    and predict_weight_cfg:
+                self.weight2_available = True
+                predict_weight2 = cfg["common"]["predict_weight2"]
+                self.predict_weight2_enable_index = cfg["common"]["predict_weight2_enable_index"]
+                self.predict_weight2_disable_index = cfg["common"]["predict_weight2_disable_index"]
 
         ####################
         # default.yaml を output_dir にコピーしておく
@@ -200,6 +238,9 @@ class Block_Controller(object):
             from machine_learning.model.deepqnet import DeepQNetwork
             # DQN モデルインスタンス作成
             self.model = DeepQNetwork()
+            if self.weight2_available:
+                self.model2 = DeepQNetwork()
+
             # 初期状態規定
             self.initial_state = torch.FloatTensor([[[0 for i in range(10)] for j in range(22)]])
             #各関数規定
@@ -275,6 +316,18 @@ class Block_Controller(object):
             else:
                 print("Please set predict_weight!!")
                 exit()
+
+            ## 第2model
+            if self.weight2_available and (not predict_weight2=="None"):
+                if os.path.exists(predict_weight2):
+                    print("Load2 {}...".format(predict_weight2))
+                    # 推論インスタンス作成
+                    self.model2 = torch.load(predict_weight2)
+                    # インスタンスを推論モードに切り替え
+                    self.model2.eval()    
+                else:
+                    print("{} is not existed!!(predict 2)".format(predict_weight))
+                    exit()
 
         ####################
         #### finetune の場合
@@ -709,6 +762,8 @@ class Block_Controller(object):
 
     ####################################
     #各列の穴の個数を数える
+    # reshape_board: 2次元画面ボード
+    # min_height: 到達可能の最下層より1行下の穴の位置をチェック -1 で無効 hole_top_penalty 無効
     ####################################
     def get_holes(self, reshape_board, min_height):
         # 穴の数
@@ -748,9 +803,11 @@ class Block_Controller(object):
             else:
                 highest_holes[i] = -1
 
-        # 全体の最下層より1行下の穴の位置をチェック
+        # 最も高い穴を求める
+        max_highest_hole = max(highest_holes)
+
+        # 到達可能の最下層より1行下の穴の位置をチェック
         if min_height > 0:
-            max_highest_hole = max(highest_holes)
             # 列ごとに切り出し
             for i in range(self.width):
                 # 最も高い位置の穴の列の場合
@@ -763,8 +820,8 @@ class Block_Controller(object):
             #print(['{:02}'.format(n) for n in highest_holes])
             #print(hole_top_penalty)
             #print("==")
-        return num_holes, hole_top_penalty
-
+        return num_holes, hole_top_penalty, max_highest_hole
+    
     ####################################
     # 現状状態の各種パラメータ取得 (MLP
     ####################################
@@ -772,7 +829,7 @@ class Block_Controller(object):
         #削除された行の報酬
         lines_cleared, reshape_board = self.check_cleared_rows(reshape_board)
         # 穴の数
-        holes, _ = self.get_holes(reshape_board, -1)
+        holes, _ , _ = self.get_holes(reshape_board, -1)
         # でこぼこの数
         bumpiness, height, max_height, min_height = self.get_bumpiness_and_height(reshape_board)
 
@@ -785,7 +842,7 @@ class Block_Controller(object):
         # 削除された行の報酬
         lines_cleared, reshape_board = self.check_cleared_rows(reshape_board)
         # 穴の数
-        holes, _ = self.get_holes(reshape_board, -1)
+        holes, _ , _ = self.get_holes(reshape_board, -1)
         # でこぼこの数
         bumpiness, height, max_row, min_height = self.get_bumpiness_and_height(reshape_board)
         # 最大高さ
@@ -1124,11 +1181,6 @@ class Block_Controller(object):
                 #    Value = 画面ボード状態
                 states[(x0, direction0, 0, 0, 0)] = self.get_state_properties(reshape_board)
 
-        ####################
-        ## Move Down 降下 の場合の一覧作成
-
-
-
         return states
 
     ####################################
@@ -1245,7 +1297,7 @@ class Block_Controller(object):
         ## 報酬計算元の値取得
         bampiness, height, max_height, min_height = self.get_bumpiness_and_height(reshape_board)
         #max_height = self.get_max_height(reshape_board)
-        hole_num, hole_top_penalty = self.get_holes(reshape_board, min_height)
+        hole_num, hole_top_penalty, _ = self.get_holes(reshape_board, min_height)
         tetris_reward = self.get_tetris_fill_reward(reshape_board)
         lines_cleared, reshape_board = self.check_cleared_rows(reshape_board)
         ## 報酬の計算
@@ -1284,7 +1336,7 @@ class Block_Controller(object):
         # 報酬計算元の値取得
         bampiness, height, max_height, min_height = self.get_bumpiness_and_height(reshape_board)
         #max_height = self.get_max_height(reshape_board)
-        hole_num, _ = self.get_holes(reshape_board, min_height)
+        hole_num, _ , _ = self.get_holes(reshape_board, min_height)
         lines_cleared, reshape_board = self.check_cleared_rows(reshape_board)
         #### 報酬の計算
         reward = self.reward_list[lines_cleared] 
@@ -1305,7 +1357,7 @@ class Block_Controller(object):
         self.cleared_col[lines_cleared] += 1
         self.tetrominoes += 1
         return reward
-           
+
     ####################################
     ####################################
     ####################################
@@ -1408,7 +1460,7 @@ class Block_Controller(object):
                 ######################
                 # 次の予測を上位predict_next_steps_trainつ実施, 1番目からpredict_next_num_train番目まで予測
                 index_list, index_list_to_q, next_actions, next_states \
-                            = self.get_predictions(True, GameStatus, next_steps, self.predict_next_steps_train, 1, self.predict_next_num_train, index_list, index_list_to_q, -60000)
+                            = self.get_predictions(self.model, True, GameStatus, next_steps, self.predict_next_steps_train, 1, self.predict_next_num_train, index_list, index_list_to_q, -60000)
                 #print(index_list_to_q)
                 #print("max")
 
@@ -1636,8 +1688,31 @@ class Block_Controller(object):
         ###############################################
         ###############################################
         elif self.mode == "predict" or self.mode == "predict_sample":
+            ##############
+            # model 切り替え
+            if self.weight2_available:
+                #ボードを２次元化
+                reshape_board = self.get_reshape_backboard(curr_backboard)
+                ## 最も高い穴の位置を求める
+                _ , _ , max_highest_hole = self.get_holes(reshape_board, -1)
+                ## model2 切り替え条件
+                if max_highest_hole < self.predict_weight2_enable_index:
+                    self.weight2_enable = True
+                ## model1 切り替え条件
+                if max_highest_hole > self.predict_weight2_disable_index:
+                    self.weight2_enable = False
+
+                print (self.weight2_enable, max_highest_hole)
+
+
+            ##############
+            # model 指定
+            predict_model = self.model
+            if self.weight2_enable:
+                predict_model = self.model2
+
             #推論モードに切り替え
-            self.model.eval()
+            predict_model.eval()
 
             # 次のテトリミノ予測
             if self.predict_next_num > 0:
@@ -1648,7 +1723,8 @@ class Block_Controller(object):
                 ######################
                 # 次の予測を上位predict_next_stepsつ実施, 1番目からpredict_next_num番目まで予測
                 index_list, index_list_to_q, next_actions, next_states \
-                            = self.get_predictions(False, GameStatus, next_steps, self.predict_next_steps, 1, self.predict_next_num, index_list, index_list_to_q, -60000)
+                            = self.get_predictions(predict_model, False, GameStatus, next_steps, self.predict_next_steps, 
+                                1, self.predict_next_num, index_list, index_list_to_q, -60000)
                 #print(index_list_to_q)
                 #print("max")
 
@@ -1665,7 +1741,7 @@ class Block_Controller(object):
                 next_actions, next_states = zip(*next_steps.items())
                 next_states = torch.stack(next_states)
                 ## 順伝搬し Q 値を取得 (model の __call__ ≒ forward)
-                predictions = self.model(next_states)[:, 0]
+                predictions = predict_model(next_states)[:, 0]
                 ## 最大値の index 取得
                 index = torch.argmax(predictions).item()
 
@@ -1718,6 +1794,7 @@ class Block_Controller(object):
     ####################################
     # テトリミノの予告に対して次の状態リストをTop num_steps個取得
     # self: 
+    # predict_model: モデル指定
     # is_train: 学習モード状態の場合 (no_gradにするため)
     # GameStatus: GameStatus
     # prev_steps: 前の手番の候補手リスト
@@ -1727,7 +1804,7 @@ class Block_Controller(object):
     # index_list: 手番ごとのindexリスト
     # index_list_to_q: 手番ごとのindexリストから Q 値への変換
     ####################################
-    def get_predictions(self, is_train, GameStatus, prev_steps, num_steps, next_order, left, index_list, index_list_to_q, highest_q):
+    def get_predictions(self, predict_model, is_train, GameStatus, prev_steps, num_steps, next_order, left, index_list, index_list_to_q, highest_q):
         ## 次の予測一覧
         next_predictions = []
         ## index_list 複製
@@ -1747,11 +1824,11 @@ class Block_Controller(object):
             # テンソルの勾配の計算を不可とする
             with torch.no_grad():
                 # 順伝搬し Q 値を取得 (model の __call__ ≒ forward)
-                predictions = self.model(next_states)[:, 0]
+                predictions = predict_model(next_states)[:, 0]
         # 推論モードの場合
         else:
             # 順伝搬し Q 値を取得 (model の __call__ ≒ forward)
-            predictions = self.model(next_states)[:, 0]
+            predictions = predict_model(next_states)[:, 0]
 
         ## num_steps 番目まで Top の index 取得
         top_indices = torch.topk(predictions, num_steps).indices
@@ -1785,7 +1862,9 @@ class Block_Controller(object):
                 #GameStatus["block_info"]["nextShapeList"]["element"+str(1)]["direction_range"]
     
                 ## 次の予測を上位 num_steps 実施, next_order 番目から left 番目まで予測
-                new_index_list, index_list_to_q, new_next_actions, new_next_states = self.get_predictions(is_train, GameStatus, next_steps, num_steps, next_order+1, left, new_index_list, index_list_to_q, highest_q)
+                new_index_list, index_list_to_q, new_next_actions, new_next_states \
+                                = self.get_predictions(predict_model, is_train, GameStatus, 
+                                    next_steps, num_steps, next_order+1, left, new_index_list, index_list_to_q, highest_q)
                 # 次のカウント
                 #predict_order += 1
         # 再帰終了

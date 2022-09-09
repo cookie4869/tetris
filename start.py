@@ -114,7 +114,8 @@ def start():
         RANDOM_SEED = -1
     elif GAME_LEVEL == 3: # level3
         RANDOM_SEED = -1
-        OBSTACLE_HEIGHT = 10
+        OBSTACLE_HEIGHT = 10 #学習用変更
+        #OBSTACLE_HEIGHT = 10 #正規
         OBSTACLE_PROBABILITY = 40
     else:
         print('invalid level: ' + str(GAME_LEVEL), file=sys.stderr)

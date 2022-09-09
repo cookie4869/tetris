@@ -23,11 +23,9 @@ common:
   log_path: tensorboard
   time_disp: False
   ## 推論用Weight
-  predict_weight: outputs/2022-09-05-23-06-53/trained_model/tetris_epoch866_score56300.pt
+  predict_weight: outputs/2022-09-08-22-06-19/trained_model/tetris_epoch4986_score16400.pt
   weight2_available: True
   predict_weight2: outputs/2022-09-09-08-54-47/trained_model/tetris_epoch1757_score27600.pt
-  predict_weight2_enable_index: 5
-  predict_weight2_disable_index: 10
 model:
   name: DQN # 学習方式 (MLP DQN
   finetune: True # 以前の学習結果を利用する  
@@ -76,7 +74,7 @@ train:
   hole_top_limit: 1 # 穴の上の積み上げペナルティ下限 (-1: 無効)
   hole_top_limit_height: 0 # 穴の上の積み上げペナルティ 穴の位置が左記の高さより高いときのみ
 
-  move_down_flag: 1 # Move Down 有効化 #DQN限定
+  move_down_flag: 0 # Move Down 有効化 #DQN限定
 
   #predict_next_flag: 1 # 次のテトリミノ予測有効化 # 20220831 無効
   predict_next_num: 4 # 次のテトリミノ予測数 (0: 無効) #DQN限定
