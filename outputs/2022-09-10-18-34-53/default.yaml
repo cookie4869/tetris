@@ -1,8 +1,7 @@
-
 common:
   ## 学習用Weight
   # Lv3 高さ比例ライン消し報酬,左はし空け 12段0.4, 高さ緩和 1,穴の上ブロックペナルティ改0.01 (穴掘りOK)
-  # ft_weight: outputs/2022-09-10-11-12-34/trained_model/tetris_epoch110_score26900.pt
+  ft_weight: outputs/2022-09-10-11-12-34/trained_model/tetris_epoch110_score26900.pt
   # Lv3 高さ比例ライン消し報酬,左はし空け 12段0.4, 高さ緩和 1,穴の上ブロックペナルティ改0.01 (穴掘りOK)
   #ft_weight: outputs/2022-09-10-07-04-07/trained_model/tetris_epoch666_score28400.pt
   # Lv3 高さ比例ライン消し報酬,左はし空け 12段0.4, 高さ緩和 12 強い
@@ -13,8 +12,6 @@ common:
   #ft_weight: outputs/2022-09-05-23-06-53/trained_model/tetris_epoch866_score56300.pt
   # Lv3 高さ比例ライン消し報酬,左はし空け 11段0.4/10000, 高さ緩和 7, 穴の上のブロック積ペナルティ0.005 強い
   #ft_weight: outputs/2022-09-06-08-01-43/trained_model/tetris_epoch1683_score71700.pt
-  # Lv3 高さ比例ライン消し報酬,左はし空け 11段0.8, 高さ緩和 5, 穴の上のブロック積ペナルティ0.005 (穴掘りOK)
-  ft_weight: outputs/2022-09-04-19-37-38/trained_model/tetris_epoch520_score57800.pt
   # Lv3 高さ比例ライン消し報酬,左はし空け 11段0.8/10000, 高さ緩和 5, 穴の上のブロック積ペナルティ0.01
   #ft_weight: outputs/2022-09-04-15-33-43/trained_model/tetris_epoch1392_score103500.pt
   # Lv3 高さ比例ライン消し報酬,左はし空け 9段0.8/10000, 高さ緩和 12
@@ -32,8 +29,7 @@ common:
   ## 推論用Weight
   #Lv3 穴掘り
   #predict_weight: outputs/2022-09-05-23-06-53/trained_model/tetris_epoch866_score56300.pt
-  #predict_weight: outputs/2022-09-10-11-12-34/trained_model/tetris_epoch110_score26900.pt
-  predict_weight: outputs/2022-09-06-08-01-43/trained_model/tetris_epoch2577_score71800.pt
+  predict_weight: outputs/2022-09-10-11-12-34/trained_model/tetris_epoch110_score26900.pt
   #predict_weight:  outputs/2022-08-16-23-07-28/trained_model/tetris_epoch192_score176400.pt
   weight2_available: True
   #Lv3 積み上げ
@@ -86,7 +82,7 @@ train:
   tetris_fill_reward: 0.001 # 左端以外を埋める報酬率 #DQN限定 #DQN限定
   tetris_fill_height: 6 # 左端以外を埋める報酬有効化上限高さ #DQN限定
 
-  hole_top_limit_reward: 0.002  # 穴の上の積み上げペナルティ #DQN限定
+  hole_top_limit_reward: 0.01  # 穴の上の積み上げペナルティ #DQN限定
   hole_top_limit_height: 0 # 穴の上の積み上げペナルティ下限絶対高さ、この高さより上のときのみペナルティ有効 (22: 無効, -1:制限なし)
   hole_top_limit: 1 # 穴の上の積み上げペナルティ 穴の位置が左記の相対高さより高いときのみ
 
@@ -107,4 +103,4 @@ tetris:
     - 700
     - 1300
     - -500
-  max_tetrominoes: 1000
+  max_tetrominoes: 300

@@ -317,7 +317,7 @@ class Block_Controller(object):
                 print("Please set predict_weight!!")
                 exit()
 
-            ## 第2model
+            ## 第2 model
             if self.weight2_available and (not predict_weight2=="None"):
                 if os.path.exists(predict_weight2):
                     print("Load2 {}...".format(predict_weight2))
@@ -495,6 +495,9 @@ class Block_Controller(object):
     ####################################
     def update(self):
 
+        ##############################
+        ## 学習の場合
+        ##############################
         if self.mode=="train" or self.mode=="train_sample" or self.mode=="train_sample2":
             # リセット時にスコア計算し episode memory に penalty 追加
             self.stack_replay_memory()
@@ -721,7 +724,7 @@ class Block_Controller(object):
         return lines,board_new
 
     ####################################
-    #各列毎の高さの差(=でこぼこ度)を計算
+    ## でこぼこ度, 高さ合計, 高さ最大, 高さ最小を求める
     ####################################
     def get_bumpiness_and_height(self, reshape_board):
         # ボード上で 0 でないもの(テトリミノのあるところ)を抽出
@@ -761,7 +764,7 @@ class Block_Controller(object):
         return total_bumpiness, total_height, max_height, min_height
 
     ####################################
-    #各列の穴の個数を数える
+    ## 穴の数, 穴の上積み上げ Penalty, 最も高い穴の位置を求める
     # reshape_board: 2次元画面ボード
     # min_height: 到達可能の最下層より1行下の穴の位置をチェック -1 で無効 hole_top_penalty 無効
     ####################################
@@ -778,6 +781,7 @@ class Block_Controller(object):
         for i in range(self.width):
             # 列取得
             col = reshape_board[:,i]
+            #print(col)
             ground_level = 0
             # 上の行から 0(ブロックなし) をみつけていく, ground_level が今の列の最上層
             while ground_level < self.height and col[ground_level] == 0:
@@ -803,23 +807,31 @@ class Block_Controller(object):
             else:
                 highest_holes[i] = -1
 
-        # 最も高い穴を求める
+        ## 最も高い穴を求める
         max_highest_hole = max(highest_holes)
 
-        # 到達可能の最下層より1行下の穴の位置をチェック
+        ## 到達可能の最下層より1行下の穴の位置をチェック
         if min_height > 0:
-            # 列ごとに切り出し
+            ## 最も高いところにある穴の数
+            highest_hole_num = 0
+            ## 列ごとに切り出し
             for i in range(self.width):
-                # 最も高い位置の穴の列の場合
+                ## 最も高い位置の穴の列の場合
                 if highest_holes[i] == max_highest_hole:
-                    # 穴の位置がhole_top_limit_height以上で穴の上の地面が高いなら Penalty
+                    highest_hole_num += 1
+                    ## 穴の絶対位置がhole_top_limit_heightより高く
+                    ## 穴の上の地面が高いなら Penalty
                     if highest_holes[i] > self.hole_top_limit_height and \
-                           highest_grounds[i] > highest_holes[i] + self.hole_top_limit:
-                        hole_top_penalty += highest_grounds[i] - (highest_holes[i] + self.hole_top_limit)
+                           highest_grounds[i] >= highest_holes[i] + self.hole_top_limit:
+                        hole_top_penalty += highest_grounds[i] - (highest_holes[i])
+            ## 最も高い位置にある穴の数で割る
+            hole_top_penalty /= highest_hole_num
+            # debug
             #print(['{:02}'.format(n) for n in highest_grounds])
             #print(['{:02}'.format(n) for n in highest_holes])
-            #print(hole_top_penalty)
+            #print(hole_top_penalty, hole_top_penalty*max_highest_hole)
             #print("==")
+
         return num_holes, hole_top_penalty, max_highest_hole
     
     ####################################
@@ -1290,26 +1302,35 @@ class Block_Controller(object):
     ####################################
     def step_v2(self, curr_backboard, action, curr_shape_class):
         x0, direction0, third_y, forth_direction, fifth_x = action
-        # 画面ボードデータをコピーして指定座標にテトリミノを配置し落下させた画面ボードとy座標を返す
+        ## 画面ボードデータをコピーして指定座標にテトリミノを配置し落下させた画面ボードとy座標を返す
         board, drop_y = self.getBoard(curr_backboard, curr_shape_class, direction0, x0, -1)
-        #ボードを２次元化
+        ##ボードを２次元化
         reshape_board = self.get_reshape_backboard(board)
-        ## 報酬計算元の値取得
-        bampiness, height, max_height, min_height = self.get_bumpiness_and_height(reshape_board)
+        #### 報酬計算元の値取得
+        ## でこぼこ度, 高さ合計, 高さ最大, 高さ最小を求める
+        bampiness, total_height, max_height, min_height = self.get_bumpiness_and_height(reshape_board)
         #max_height = self.get_max_height(reshape_board)
-        hole_num, hole_top_penalty, _ = self.get_holes(reshape_board, min_height)
+        ## 穴の数, 穴の上積み上げ Penalty, 最も高い穴の位置を求める
+        hole_num, hole_top_penalty, max_highest_hole = self.get_holes(reshape_board, min_height)
+        ## 左端あけた形状の報酬計算
         tetris_reward = self.get_tetris_fill_reward(reshape_board)
+        ## 消せるセルの確認
         lines_cleared, reshape_board = self.check_cleared_rows(reshape_board)
         ## 報酬の計算
         reward = self.reward_list[lines_cleared] * (1 + (self.height - max(0,max_height))/self.height_line_reward)
-        # 継続報酬
+        ## 継続報酬
         #reward += 0.01
-        # 形状の罰報酬
+        #### 形状の罰報酬
+        ## でこぼこ度
         reward -= self.reward_weight[0] * bampiness 
+        ## 最大高さ
         if max_height > self.max_height_relax:
             reward -= self.reward_weight[1] * max(0,max_height)
+        ## 穴の数
         reward -= self.reward_weight[2] * hole_num
-        reward -= self.hole_top_limit_reward * hole_top_penalty
+        ## 穴の上のブロック数
+        reward -= self.hole_top_limit_reward * hole_top_penalty * max_highest_hole
+        ## 左端以外埋めている状態
         reward += tetris_reward * self.tetris_fill_reward
 
         self.epoch_reward += reward 
@@ -1702,7 +1723,8 @@ class Block_Controller(object):
                 if max_highest_hole > self.predict_weight2_disable_index:
                     self.weight2_enable = False
 
-                print (self.weight2_enable, max_highest_hole)
+                #debug
+                print (GameStatus["judge_info"]["block_index"], self.weight2_enable, max_highest_hole)
 
 
             ##############
