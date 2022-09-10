@@ -1,40 +1,47 @@
 
 common:
   ## 学習用Weight
-  # Lv3 高さ比例ライン消し報酬,左はし空け 12段0.4, 高さ緩和 1,穴の上ブロックペナルティ改0.01 (穴掘りOK)
+  ## Lv3 高さ比例ライン消し報酬,左はし空け 12段0.4, 高さ緩和 1,穴の上ブロックペナルティ改0.01 (穴掘りOK)
   # ft_weight: outputs/2022-09-10-11-12-34/trained_model/tetris_epoch110_score26900.pt
-  # Lv3 高さ比例ライン消し報酬,左はし空け 12段0.4, 高さ緩和 1,穴の上ブロックペナルティ改0.01 (穴掘りOK)
+  ## Lv3 高さ比例ライン消し報酬,左はし空け 12段0.4, 高さ緩和 1,穴の上ブロックペナルティ改0.01 (穴掘りOK)
   #ft_weight: outputs/2022-09-10-07-04-07/trained_model/tetris_epoch666_score28400.pt
-  # Lv3 高さ比例ライン消し報酬,左はし空け 11段0.01/10000, 高さ緩和 1, 穴の上のブロック積ペナルティ0.005 (穴掘りOK)
+  ## Lv3 高さ比例ライン消し報酬,左はし空け 11段0.01/10000, 高さ緩和 1, 穴の上のブロック積ペナルティ0.005 (穴掘りOK)
   #ft_weight: outputs/2022-09-08-22-06-19/trained_model/tetris_epoch4986_score16400.pt
-  # Lv3 高さ比例ライン消し報酬,左はし空け 11段0.2/10000, 高さ緩和 5, 穴の上のブロック積ペナルティ0.005 (穴掘りOK)
+  ## Lv3 高さ比例ライン消し報酬,左はし空け 11段0.2/10000, 高さ緩和 5, 穴の上のブロック積ペナルティ0.005 (穴掘りOK)
   #ft_weight: outputs/2022-09-05-23-06-53/trained_model/tetris_epoch866_score56300.pt
-  # Lv3 高さ比例ライン消し報酬,左はし空け 11段0.4/10000, 高さ緩和 7, 穴の上のブロック積ペナルティ0.005 強い
+  ## Lv3 高さ比例ライン消し報酬,左はし空け 11段0.4/10000, 高さ緩和 7, 穴の上のブロック積ペナルティ0.005 強い
   #ft_weight: outputs/2022-09-06-08-01-43/trained_model/tetris_epoch1683_score71700.pt
-  # Lv3 高さ比例ライン消し報酬,左はし空け 11段0.8, 高さ緩和 5, 穴の上のブロック積ペナルティ0.005 (穴掘りOK)
+  ## Lv3 高さ比例ライン消し報酬,左はし空け 11段0.8, 高さ緩和 5, 穴の上のブロック積ペナルティ0.005 (穴掘りOK)
   ft_weight: outputs/2022-09-04-19-37-38/trained_model/tetris_epoch520_score57800.pt
-  # Lv3 高さ比例ライン消し報酬,左はし空け 11段0.8/10000, 高さ緩和 5, 穴の上のブロック積ペナルティ0.01
+  ## Lv3 高さ比例ライン消し報酬,左はし空け 11段0.8/10000, 高さ緩和 5, 穴の上のブロック積ペナルティ0.01
   #ft_weight: outputs/2022-09-04-15-33-43/trained_model/tetris_epoch1392_score103500.pt
-  # Lv3 高さ比例ライン消し報酬,左はし空け 9段0.8/10000, 高さ緩和 12
+  ## Lv3 高さ比例ライン消し報酬,左はし空け 9段0.8/10000, 高さ緩和 12
   #ft_weight: outputs/2022-09-03-19-31-58/trained_model/tetris_epoch9085_score46700.pt
-  # Lv3 高さ比例ライン消し報酬,左はし空け 12段0.4, 高さ緩和 12 強い
+  ## Lv3 高さ比例ライン消し報酬,左はし空け 12段0.4, 高さ緩和 12 強い
   #ft_weight: outputs/2022-09-03-13-05-06/trained_model/tetris_epoch6390_score16800.pt
-  # Lv3 高さ比例ライン消し報酬,左はし空け 12段0.4, 高さ緩和 12 強い
+  ## Lv3 高さ比例ライン消し報酬,左はし空け 12段0.4, 高さ緩和 12 強い
   #ft_weight: outputs/2022-09-03-11-40-46/trained_model/tetris_epoch754_score17400.pt
-  # Lv2 4回先読み最適化 強い,左はし空け 6段0.8, 高さ緩和 7
+  ## Lv2 4回先読み最適化 強い,左はし空け 6段0.8, 高さ緩和 7
   #ft_weight: outputs/2022-08-31-08-05-53/trained_model/tetris_epoch1701_score189000.pt
-  # Lv2 1回先読み最適化
+  ## Lv2 1回先読み最適化
   #ft_weight: outputs/2022-08-17-20-41-25/trained_model/tetris_epoch949_score203900.pt # 以前の学習結果を利用する場合のファイル 
   log_path: tensorboard
   time_disp: False
   ## 推論用Weight
   #Lv3 穴掘り
+  ## 不安定 だが高速
   predict_weight: outputs/2022-09-10-18-34-53/trained_model/tetris_epoch3277_score16700.pt
+  ## 高速
   #predict_weight: outputs/2022-09-10-18-34-53/trained_model/tetris_epoch2442_score17100.pt
-  #predict_weight: outputs/2022-09-05-23-06-53/trained_model/tetris_epoch866_score56300.pt
+  ##
   #predict_weight: outputs/2022-09-10-11-12-34/trained_model/tetris_epoch110_score26900.pt
+  ##
   #predict_weight: outputs/2022-09-06-08-01-43/trained_model/tetris_epoch2577_score71800.pt
+  ## 安定
+  #predict_weight: outputs/2022-09-05-23-06-53/trained_model/tetris_epoch866_score56300.pt
+  ##
   #predict_weight: outputs/2022-09-03-11-40-46/trained_model/tetris_epoch754_score17400.pt
+  ## Level 2 推測前
   #predict_weight: outputs/2022-08-16-23-07-28/trained_model/tetris_epoch192_score176400.pt
   weight2_available: True
   #Lv3 積み上げ
@@ -69,6 +76,7 @@ train:
   prioritized_replay: True 
   multi_step_learning: False
   multi_step_num: 3
+
   reward_list: #These parameter are not normalized. 消去報酬の配分
     - 0  #survival
     - 100 #0 #1block
@@ -91,7 +99,7 @@ train:
   hole_top_limit_height: 0 # 穴の上の積み上げペナルティ下限絶対高さ、この高さより上のときのみペナルティ有効 (22: 無効, -1:制限なし)
   hole_top_limit: 1 # 穴の上の積み上げペナルティ 穴の位置が左記の相対高さより高いときのみ
 
-  move_down_flag: 1 # Move Down 有効化 #DQN限定
+  move_down_flag: 0 # Move Down 有効化 #DQN限定
 
   #predict_next_flag: 1 # 次のテトリミノ予測有効化 # 20220831 無効
   predict_next_num: 4 # 次のテトリミノ予測数 (0: 無効) #DQN限定
