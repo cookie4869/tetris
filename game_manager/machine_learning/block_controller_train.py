@@ -285,6 +285,13 @@ class Block_Controller(object):
                 self.hole_top_limit_height = 0
             print("hole_top_limit_height:", self.hole_top_limit_height)
 
+            if 'left_side_height_penalty' in cfg["train"]:
+                self.left_side_height_penalty = cfg["train"]["left_side_height_penalty"]
+            else:
+                self.left_side_height_penalty = 0
+            print("left_side_height_penalty:", self.left_side_height_penalty)
+
+
         # 共通報酬関連規定
         if 'bumpiness_left_side_relax' in cfg["train"]:
             self.bumpiness_left_side_relax = cfg["train"]["bumpiness_left_side_relax"]
@@ -647,6 +654,7 @@ class Block_Controller(object):
             ###################################
             # EPOCH 数が規定数を超えたら
             if self.epoch > self.num_epochs:
+                # ログ出力
                 with open(self.log,"a") as f:
                     print("finish..", file=f)
                 if os.path.exists(self.latest_dir):
@@ -761,7 +769,7 @@ class Block_Controller(object):
 
         # 差分の絶対値を合計してでこぼこ度とする
         total_bumpiness = np.sum(diffs)
-        return total_bumpiness, total_height, max_height, min_height
+        return total_bumpiness, total_height, max_height, min_height, heights[0]
 
     ####################################
     ## 穴の数, 穴の上積み上げ Penalty, 最も高い穴の位置を求める
@@ -843,7 +851,7 @@ class Block_Controller(object):
         # 穴の数
         holes, _ , _ = self.get_holes(reshape_board, -1)
         # でこぼこの数
-        bumpiness, height, max_height, min_height = self.get_bumpiness_and_height(reshape_board)
+        bumpiness, height, max_height, min_height, _ = self.get_bumpiness_and_height(reshape_board)
 
         return torch.FloatTensor([lines_cleared, holes, bumpiness, height])
 
@@ -856,7 +864,7 @@ class Block_Controller(object):
         # 穴の数
         holes, _ , _ = self.get_holes(reshape_board, -1)
         # でこぼこの数
-        bumpiness, height, max_row, min_height = self.get_bumpiness_and_height(reshape_board)
+        bumpiness, height, max_row, min_height,_ = self.get_bumpiness_and_height(reshape_board)
         # 最大高さ
         #max_row = self.get_max_height(reshape_board)
         return torch.FloatTensor([lines_cleared, holes, bumpiness, height, max_row])
@@ -1308,7 +1316,7 @@ class Block_Controller(object):
         reshape_board = self.get_reshape_backboard(board)
         #### 報酬計算元の値取得
         ## でこぼこ度, 高さ合計, 高さ最大, 高さ最小を求める
-        bampiness, total_height, max_height, min_height = self.get_bumpiness_and_height(reshape_board)
+        bampiness, total_height, max_height, min_height, left_side_height = self.get_bumpiness_and_height(reshape_board)
         #max_height = self.get_max_height(reshape_board)
         ## 穴の数, 穴の上積み上げ Penalty, 最も高い穴の位置を求める
         hole_num, hole_top_penalty, max_highest_hole = self.get_holes(reshape_board, min_height)
@@ -1321,17 +1329,20 @@ class Block_Controller(object):
         ## 継続報酬
         #reward += 0.01
         #### 形状の罰報酬
-        ## でこぼこ度
+        ## でこぼこ度罰
         reward -= self.reward_weight[0] * bampiness 
-        ## 最大高さ
+        ## 最大高さ罰
         if max_height > self.max_height_relax:
             reward -= self.reward_weight[1] * max(0,max_height)
-        ## 穴の数
+        ## 穴の数罰
         reward -= self.reward_weight[2] * hole_num
-        ## 穴の上のブロック数
+        ## 穴の上のブロック数罰
         reward -= self.hole_top_limit_reward * hole_top_penalty * max_highest_hole
-        ## 左端以外埋めている状態
+        ## 左端以外埋めている状態報酬
         reward += tetris_reward * self.tetris_fill_reward
+        ## 左端が高すぎる場合の罰
+        if left_side_height > self.bumpiness_left_side_relax:
+            reward -= (left_side_height - self.bumpiness_left_side_relax) * self.left_side_height_penalty
 
         self.epoch_reward += reward 
 
@@ -1355,7 +1366,7 @@ class Block_Controller(object):
         #ボードを２次元化
         reshape_board = self.get_reshape_backboard(board)
         # 報酬計算元の値取得
-        bampiness, height, max_height, min_height = self.get_bumpiness_and_height(reshape_board)
+        bampiness, height, max_height, min_height, _ = self.get_bumpiness_and_height(reshape_board)
         #max_height = self.get_max_height(reshape_board)
         hole_num, _ , _ = self.get_holes(reshape_board, min_height)
         lines_cleared, reshape_board = self.check_cleared_rows(reshape_board)
