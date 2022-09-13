@@ -3,18 +3,12 @@ python start.py -m train -d 1 -l 2 -t -1
 python start.py -m predict -l 2 --predict_weight outputs/2022-08-16-23-07-28/trained_model/tetris_epoch192_score176400.pt
 tensorboard --logdir='
 
-# ユーザー名確定
 git config --global user.name "cookie4869"
-# 新しい branch 作成
-git checkout -b branch名
-# ファイルをリポジトリ追加
 git add outputs
-# 更新をリポジトリに登録
 git commit -am 'Add outputs'
-# Local origin リポジトリを　リモート cookie3_branch に格納
-git push origin cookie4_branch
+git push origin cookie_branch
 
-■スコア履歴 
+■スコア履歴
 2022-08-01-00-09-33 default DQN	140000
 2022-08-08-23-27-26 default MLP	50400
 2022-08-08-00-07-02 MLP Reward 100/300/1000/3000/5000	12100	

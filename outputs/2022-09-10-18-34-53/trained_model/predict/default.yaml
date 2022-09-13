@@ -112,9 +112,9 @@ train:
   move_down_flag: 0 # Move Down 有効化 #DQN限定
 
   #predict_next_flag: 1 # 次のテトリミノ予測有効化 # 20220831 無効
-  predict_next_num: 4 # 次のテトリミノ予測数 (0: 無効) #DQN限定
+  predict_next_num: 0 # 次のテトリミノ予測数 (0: 無効) #DQN限定
   predict_next_steps: 5 #  1つの手番で候補手をいくつ探すか
-  predict_next_num_train: 2 # 次のテトリミノ予測有効化 (学習時) (0: 無効) #DQN限定
+  predict_next_num_train: 0 # 次のテトリミノ予測有効化 (学習時) (0: 無効) #DQN限定
   predict_next_steps_train: 3 #  1つの手番で候補手をいくつ探すか (学習時)
 tetris:
   board_height: 22
