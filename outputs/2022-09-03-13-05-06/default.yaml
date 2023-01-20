@@ -1,0 +1,69 @@
+common:
+  ft_weight: outputs/2022-09-03-11-40-46/trained_model/tetris_epoch754_score17400.pt
+  # 4回先読み先鋭化
+  #ft_weight: outputs/2022-08-17-08-15-23/trained_model/tetris_epoch28_score179300.pt
+  # 4回先読み最適化
+  #ft_weight: outputs/2022-08-31-08-05-53/trained_model/tetris_epoch1701_score189000.pt
+  # 1回先読み最適化
+  #ft_weight: outputs/2022-08-17-20-41-25/trained_model/tetris_epoch949_score203900.pt # 以前の学習結果を利用する場合のファイル 
+  log_path: tensorboard
+  time_disp: False
+model:
+  name: DQN # 学習方式 (MLP DQN
+  finetune: True # 以前の学習結果を利用する  
+state:
+  dim: 4
+train:
+  optimizer: Adam #Adam or SGD
+  lr: 1.0e-3 # 学習率
+  lr_gamma: 0.1 # SGD 用 ... Step Size 進んだ EPOCH で gammma が学習率に乗算される
+  lr_momentum: 0.99 # SGD 用 ... モーメンタム... 今までの移動とこれから動くべき移動の平均をとり振動を防ぐための関数
+  lr_step_size: 1000 # SGD 用 ... step size 学習率更新タイミングの EPOCH 数
+  num_epoch: 100000 # 試行回数
+  num_decay_epochs: 3500 # ε収束させる試行回数
+  initial_epsilon: 1.0e-3 # ε... 学習が局所解にならないように乱数で動かして最適値する。学習初期は 1, 初期値 Fine Tune の場合は小さめに
+  final_epsilon: 1.0e-3 # 上記εを漸減させたときの最終値
+  batch_size: 512 # バッチサイズ　確率的勾配降下法における、全パラメータのうちランダム抽出して勾配を求めるパラメータの数
+  gamma: 0.8 # 割引率 ... t+1 の報酬をどの程度割り引いて考えるか
+  max_penalty: -1 # 正規化する場合の最小報酬
+  target_net: True
+  target_copy_intarval: 500 # Target Net をロードする EPOCH 数間隔
+  replay_memory_size: 30000
+  double_dqn: True # Dobule DQN 有効化
+  reward_clipping: True # 報酬を 1 で正規化、ただし消去報酬のみ
+  prioritized_replay: True 
+  multi_step_learning: False
+  multi_step_num: 3
+  reward_list: #These parameter are not normalized. 消去報酬の配分
+    - 0  #survival
+    - 800 #0 #1block
+    - 2000 #2block
+    - 6000 #3block
+    - 10000 #4block
+    - -10000 #game over
+  height_line_reward: 5 #低いところの消去ほど有効とする設定(10000 くらいでほぼ無効 大きい値ほど報酬小さい)
+  reward_weight: # 形状報酬の配分
+    - 0.02 #1 #bampiness 
+    - 0.04 #1 #max height
+    - 0.02 #1 #hole_num
+  bumpiness_left_side_relax: 13 # 左端のでこぼこだけどこまで許容するか
+  max_height_relax: 12 # 高さをどこまで許容するか
+  tetris_fill_reward: 0.4 # 左端以外を埋める報酬率 #DQN限定
+  tetris_fill_height: 12 # 左端以外を埋める報酬有効化 #DQN限定
+  move_down_flag: 1 # Move Down 有効化
+  predict_next_flag: 1 # 次のテトリミノ予測有効化 # 20220831 無効
+  predict_next_num: 4 # 次のテトリミノ予測数 (0: 無効)
+  predict_next_steps: 5 #  1つの手番で候補手をいくつ探すか
+  predict_next_num_train: 0 # 次のテトリミノ予測有効化 (学習時) (0: 無効)
+  predict_next_steps_train: 5 #  1つの手番で候補手をいくつ探すか (学習時)
+tetris:
+  board_height: 22
+  board_width: 10
+  score_list:
+    - 0
+    - 100
+    - 300
+    - 700
+    - 1300
+    - -500
+  max_tetrominoes: 300
