@@ -1,18 +1,55 @@
 
 common:
   #### 学習用Weight
-  ## File 指定
-  ft_weight: outputs/YYYY-MM-DD-hh-mm-ss/trained_model/best_weight.pt
+  ## Lv3 高さ比例ライン消し報酬,左はし空け 11段0.01/10000, 高さ緩和 1, 穴の上のブロック積ペナルティ0.005 (穴掘りOK)
+  #ft_weight: outputs/2022-09-08-22-06-19/trained_model/tetris_epoch4986_score16400.pt
+  ## Lv3 高さ比例ライン消し報酬,左はし空け 11段0.2/10000, 高さ緩和 5, 穴の上のブロック積ペナルティ0.005 (穴掘りOK)
+  #ft_weight: outputs/2022-09-05-23-06-53/trained_model/tetris_epoch866_score56300.pt
+  ## Lv3 高さ比例ライン消し報酬,左はし空け 11段0.4/10000, 高さ緩和 7, 穴の上のブロック積ペナルティ0.005 強い
+  #ft_weight: outputs/2022-09-06-08-01-43/trained_model/tetris_epoch1683_score71700.pt
+  ## Lv3 高さ比例ライン消し報酬,左はし空け 11段0.8, 高さ緩和 5, 穴の上のブロック積ペナルティ0.005 (穴掘りOK)
+  #ft_weight: outputs/2022-09-04-19-37-38/trained_model/tetris_epoch520_score57800.pt
+  ## Lv3 高さ比例ライン消し報酬,左はし空け 11段0.8/10000, 高さ緩和 5, 穴の上のブロック積ペナルティ0.01
+  #ft_weight: outputs/2022-09-04-15-33-43/trained_model/tetris_epoch1392_score103500.pt
+  ## Lv3 高さ比例ライン消し報酬,左はし空け 9段0.8/10000, 高さ緩和 12
+  #ft_weight: outputs/2022-09-03-19-31-58/trained_model/tetris_epoch9085_score46700.pt
+  ## Lv3 高さ比例ライン消し報酬,左はし空け 12段0.4, 高さ緩和 12 強い
+  ft_weight: outputs/2022-09-03-13-05-06/trained_model/tetris_epoch6390_score16800.pt
+  ## Lv3 高さ比例ライン消し報酬,左はし空け 12段0.4, 高さ緩和 12 強い
+  #ft_weight: outputs/2022-09-03-11-40-46/trained_model/tetris_epoch754_score17400.pt
+  ## Lv2 4回先読み最適化 強い,左はし空け 6段0.8, 高さ緩和 7
+  #ft_weight: outputs/2022-08-31-08-05-53/trained_model/tetris_epoch1701_score189000.pt
+  ## Lv2 1回先読み最適化
+  #ft_weight: outputs/2022-08-17-20-41-25/trained_model/tetris_epoch949_score203900.pt # 以前の学習結果を利用する場合のファイル 
+
   log_path: tensorboard
   time_disp: False
+
   #### 推論用Weight
-  # File 指定
-  predict_weight: outputs/YYYY-MM-DD-hh-mm-ss/trained_model/best_weight.pt
+  #Lv3 穴掘り
+  ## 不安定 だが高速
+  #predict_weight: outputs/2022-09-10-18-34-53/trained_model/tetris_epoch3277_score16700.pt
+  ## 高速
+  predict_weight: outputs/2022-09-10-18-34-53/trained_model/tetris_epoch2442_score17100.pt
+  ##
+  #predict_weight: outputs/2022-09-10-11-12-34/trained_model/tetris_epoch110_score26900.pt
+  ##
+  #predict_weight: outputs/2022-09-06-08-01-43/trained_model/tetris_epoch2577_score71800.pt
+  ## 安定
+  #predict_weight: outputs/2022-09-05-23-06-53/trained_model/tetris_epoch866_score56300.pt
+  ##
+  #predict_weight: outputs/2022-09-03-11-40-46/trained_model/tetris_epoch754_score17400.pt
+  ## Level 2 推測前
+  #predict_weight: outputs/2022-08-16-23-07-28/trained_model/tetris_epoch192_score176400.pt
 
   #### 第2model 有効
-  weight2_available: False
+  weight2_available: True
   #### 第2model
-  predict_weight2: outputs/YYYY-MM-DD-hh-mm-ss/trained_model/best_weight.pt
+  ## Lv3 積み上げ (OBSTACLE_HEIGHT = 5で学習) 左端高めNG
+  #predict_weight2: outputs/2022-09-11-12-11-16/trained_model/tetris_epoch2408_score24800.pt
+  ## Lv3 積み上げ (OBSTACLE_HEIGHT = 5で学習)
+  predict_weight2: outputs/2022-09-09-08-54-47/trained_model/tetris_epoch2356_score26800.pt
+
 
   #### model 切り替えポイント (最も高い穴の位置が下記より低いとき)
   predict_weight2_enable_index: 5
@@ -20,7 +57,7 @@ common:
   predict_weight2_disable_index: 10
 model:
   name: DQN # 学習方式 (MLP DQN)
-  finetune: False # 以前の学習結果を利用する (True False)
+  finetune: True # 以前の学習結果を利用する (True False)
 state:
   dim: 4
 train:
@@ -31,7 +68,7 @@ train:
   lr_step_size: 1000 # SGD 用 ... step size 学習率更新タイミングの EPOCH 数  (1 to num_epoch)
   num_epoch: 10000 # 試行回数 (lr_step_size to num_epoch)
   num_decay_epochs: 3500 # ε収束させる試行回数
-  initial_epsilon: 1.0e-1 # ε... 学習が局所解にならないように乱数で動かして最適値する。学習初期は 1, 初期値 Fine Tune の場合は小さめに  (0 to 1.0)
+  initial_epsilon: 1.0e-3 # ε... 学習が局所解にならないように乱数で動かして最適値する。学習初期は 1, 初期値 Fine Tune の場合は小さめに  (0 to 1.0)
   final_epsilon: 1.0e-3 # 上記εを漸減させたときの最終値 num_decay_epochs 試行後  (0 to final_epsilon)
   batch_size: 512 # バッチサイズ　確率的勾配降下法における、全パラメータのうちランダム抽出して勾配を求めるパラメータの数 (2^n)
   gamma: 0.8 # 割引率 ... t+1 の報酬をどの程度割り引いて考えるか (0 to 1.0)
@@ -60,20 +97,20 @@ train:
   bumpiness_left_side_relax: 1 # 左端のでこぼこだけどこまで許容するか
   max_height_relax: 14 # 高さをどこまで許容するか(左記より大きい)
 
-  tetris_fill_reward: 0.0001 # 左端以外を埋める報酬率 #DQN限定 #DQN限定
+  tetris_fill_reward: 0.8 # 左端以外を埋める報酬率 #DQN限定 #DQN限定
   tetris_fill_height: 11 # 左端以外を埋める報酬有効化上限高さ #DQN限定
-  left_side_height_penalty: 0.00001 # 左端を tetris_fill_height 以上積んだ時の penalty #DQN限定
+  left_side_height_penalty: 0.005 # 左端を tetris_fill_height 以上積んだ時の penalty #DQN限定
 
-  hole_top_limit_reward: 0.00001  # 穴の上の積み上げペナルティ #DQN限定
+  hole_top_limit_reward: 0.001  # 穴の上の積み上げペナルティ #DQN限定
   hole_top_limit_height: 5 # 穴の上の積み上げペナルティ下限絶対高さ、この高さより上のときのみペナルティ有効 (22: 無効, -1:制限なし)
   hole_top_limit: 1 # 穴の上の積み上げペナルティ 穴の位置が左記の相対高さより高いときのみ
 
   move_down_flag: 0 # Move Down 有効化 #DQN限定
 
   #predict_next_flag: 1 # 次のテトリミノ予測有効化 # 20220831 無効
-  predict_next_num: 0 # 次のテトリミノ予測数 (0: 無効) #DQN限定
+  predict_next_num: 4 # 次のテトリミノ予測数 (0: 無効) #DQN限定
   predict_next_steps: 5 #  1つの手番で候補手をいくつ探すか #DQN限定
-  predict_next_num_train: 0 # 次のテトリミノ予測有効化 (学習時) (0: 無効) #DQN限定
+  predict_next_num_train: 2 # 次のテトリミノ予測有効化 (学習時) (0: 無効) #DQN限定
   predict_next_steps_train: 3 #  1つの手番で候補手をいくつ探すか (学習時) #DQN限定
 tetris:
   board_height: 22 # 画面ボード高さ 22 固定
