@@ -52,6 +52,7 @@ class Block_Controller(object):
     debug_flag_try_move = 0
     debug_flag_drop_down = 0
     debug_flag_move_down = 0
+    debug_weight2_status = 0
 
     ####################################
     # 起動時初期化
@@ -941,7 +942,7 @@ class Block_Controller(object):
     ####################################
     #次の状態リストを取得(2次元用) DQN .... 画面ボードで テトリミノ回転状態 に落下させたときの次の状態一覧を作成
     #  get_next_func でよびだされる
-    # curr_backboard 現画面
+    # curr_backboard 現画面 1次元
     # piece_id テトリミノ I L J T O S Z
     # currentshape_class = status["field_info"]["backboard"]
     ####################################
@@ -1750,7 +1751,8 @@ class Block_Controller(object):
                     self.weight2_enable = False
 
                 #debug
-                print (GameStatus["judge_info"]["block_index"], self.weight2_enable, max_highest_hole)
+                if self.debug_weight2_status:
+                    print ("weight2 status:", GameStatus["judge_info"]["block_index"], self.weight2_enable, max_highest_hole)
 
 
             ##############
@@ -1778,11 +1780,23 @@ class Block_Controller(object):
 
                 # 全予測の最大 q
                 max_index_list = max(index_list_to_q, key=index_list_to_q.get)
-                #print(max(index_list_to_q, key=index_list_to_q.get))
-                #print(max_index_list[0].item())
-                #print("============================")
                 # 1手目の index 入手
                 index = max_index_list[0].item()
+                
+                ## debug
+                print("============================")
+                print(max_index_list)
+
+                ## 順伝搬し Q 値を取得 (model の __call__ ≒ forward)
+                predictions = predict_model(next_states)[:, 0]
+                ## 直後の Q 値印字
+                print("Q1  : ", predictions[index].item())
+
+                print("Q1-4: ", index_list_to_q[max_index_list])
+
+                #print(max(index_list_to_q, key=index_list_to_q.get))
+                #print(max_index_list[0].item())
+
 
             else:
                 ### 画面ボードの次の状態一覧を action と states にわけ、states を連結
@@ -1902,9 +1916,13 @@ class Block_Controller(object):
                 #next_predict_backboard.append(np.ravel(next_state.numpy().astype(int)))
                 #print(predict_order,":", next_predict_backboard[predict_order])
         
-                # 次の予想手リスト
                 # next_state Numpy に変換し int にして、1次元化
-                next_steps = self.get_next_func( np.ravel(next_state.numpy().astype(int)),
+                next_backboard = np.ravel(next_state.numpy().astype(int))
+                # 消せるラインは消しておく
+                lines_cleared, next_backboard = self.check_cleared_rows(next_backboard)
+
+                # 次の予想手リスト
+                next_steps = self.get_next_func(next_backboard,
                                      GameStatus["block_info"]["nextShapeList"]["element"+str(next_order)]["index"],
                                      GameStatus["block_info"]["nextShapeList"]["element"+str(next_order)]["class"]) 
                 #GameStatus["block_info"]["nextShapeList"]["element"+str(1)]["direction_range"]

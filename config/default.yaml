@@ -23,7 +23,7 @@ common:
   #ft_weight: outputs/2022-08-17-20-41-25/trained_model/tetris_epoch949_score203900.pt # 以前の学習結果を利用する場合のファイル 
 
   log_path: tensorboard
-  time_disp: False
+  time_disp: True
 
   #### 推論用Weight
   #Lv3 穴掘り
