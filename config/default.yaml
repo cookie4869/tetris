@@ -21,7 +21,6 @@ common:
 
   ## Level 2 左端積み上げ制限
   ft_weight: outputs/2023-01-24-23-09-09/trained_model/tetris_epoch26_score4300.pt
-  ft_weight: outputs/2023-01-23-15-27-05/trained_model/tetris_epoch4000_score6400.pt
   ## Lv2 4回先読み最適化 強い,左はし空け 6段0.8, 高さ緩和 7
   #ft_weight: outputs/2022-08-31-08-05-53/trained_model/tetris_epoch1701_score189000.pt
   ## Lv2 1回先読み最適化
