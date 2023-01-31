@@ -64,7 +64,7 @@ common:
   #predict_weight2: outputs/2022-09-09-08-54-47/trained_model/tetris_epoch2356_score26800.pt
 
   ## Level 2 左端積み上げ制限
-  predict_weight2: outputs/2023-01-23-15-27-05/trained_model/tetris_epoch4000_score6400.pt
+  predict_weight2: outputs/2023-01-24-23-09-09/trained_model/tetris_epoch26_score4300.pt
 
   #### model 切り替えポイント (最も高い穴の位置が下記より低いとき)
   predict_weight2_enable_index: 5
