@@ -1920,11 +1920,11 @@ class Block_Controller(object):
                     # 最高値とする
                     highest_q = now_q
 
-                # 次の画面ボード (torch) をひっぱってくる
+                ## 次の画面ボード (torch) をひっぱってくる
                 next_state = next_states[index, :]
                 #print(next_order, ":", next_state)
 
-                # next_state Numpy に変換し int にして、消せるラインは消しておく
+                ## next_state Numpy に変換し int にして、消せるラインをカウント
                 lines_cleared, next_state_cleared = self.check_cleared_rows((next_state.numpy().astype(int))[0])
                 #print(next_order, ":", next_state.numpy().astype(int))
                 #if lines_cleared > 0:
@@ -1933,18 +1933,20 @@ class Block_Controller(object):
                 #    print("===")
                 #    print(next_state_cleared)
 
-                # 消したライン数を保存
+                ## 消したライン数を保存
                 index_list_to_lines_cleared[tuple(new_index_list)] = lines_cleared
 
-                # Numpy に変換し int にして、1次元化
+                ## Numpy に変換し int にして、1次元化
                 #next_predict_backboard.append(np.ravel(next_state.numpy().astype(int)))
                 #print(predict_order,":", next_predict_backboard[predict_order])
         
-                # 画面ボードを1次元化
-                next_backboard = np.ravel(next_state_cleared)
-                #next_backboard = np.ravel(next_state.numpy().astype(int))
+                ## 画面ボードを1次元化
+                next_backboard = np.ravel(next_state.numpy().astype(int))
+                
+                ## 画面ボードを1次元化 (消去ライン込みとする場合)
+                #next_backboard = np.ravel(next_state_cleared)
 
-                # 次の予想手リスト
+                ## 次の予想手リスト
                 next_steps = self.get_next_func(next_backboard,
                                      GameStatus["block_info"]["nextShapeList"]["element"+str(next_order)]["index"],
                                      GameStatus["block_info"]["nextShapeList"]["element"+str(next_order)]["class"]) 
