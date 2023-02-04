@@ -732,7 +732,7 @@ class Block_Controller(object):
         self.skip_drop = [-1, -1, -1]
 
     ####################################
-    #削除されるLineを数える
+    #削除されるLineを数える (2次元)
     ####################################
     def check_cleared_rows(self, reshape_board):
         board_new = np.copy(reshape_board)
@@ -1504,10 +1504,13 @@ class Block_Controller(object):
                 index_list = []
                 # index_list_to_q (1番目index, 2番目index, 3番目index ...) => q
                 index_list_to_q = {}
+                # index_list_to_line (1番目index, 2番目index, 3番目index ...) => 消去ライン数
+                index_list_to_lines_cleared = {}
                 ######################
                 # 次の予測を上位predict_next_steps_trainつ実施, 1番目からpredict_next_num_train番目まで予測
-                index_list, index_list_to_q, next_actions, next_states \
-                            = self.get_predictions(self.model, True, GameStatus, next_steps, self.predict_next_steps_train, 1, self.predict_next_num_train, index_list, index_list_to_q, -60000)
+                index_list, index_list_to_q, next_actions, next_states, index_list_to_lines_cleared \
+                            = self.get_predictions(self.model, True, GameStatus, next_steps, self.predict_next_steps_train, 1, 
+                                    self.predict_next_num_train, index_list, index_list_to_q, -60000, index_list_to_lines_cleared)
                 #print(index_list_to_q)
                 #print("max")
 
@@ -1736,6 +1739,8 @@ class Block_Controller(object):
         ###############################################
         ###############################################
         elif self.mode == "predict" or self.mode == "predict_sample":
+            # debug
+            #print("Reshape Backboard: ",self.get_reshape_backboard(curr_backboard))
             ##############
             # model 切り替え
             if self.weight2_available:
@@ -1770,15 +1775,17 @@ class Block_Controller(object):
                 index_list = []
                 # index_list_to_q (1番目index, 2番目index, 3番目index ...) => q
                 index_list_to_q = {}
+                # index_list_to_line (1番目index, 2番目index, 3番目index ...) => 消去ライン数
+                index_list_to_lines_cleared = {}
                 ######################
                 # 次の予測を上位predict_next_stepsつ実施, 1番目からpredict_next_num番目まで予測
-                index_list, index_list_to_q, next_actions, next_states \
+                index_list, index_list_to_q, next_actions, next_states, index_list_to_lines_cleared \
                             = self.get_predictions(predict_model, False, GameStatus, next_steps, self.predict_next_steps, 
-                                1, self.predict_next_num, index_list, index_list_to_q, -60000)
+                                1, self.predict_next_num, index_list, index_list_to_q, -60000, index_list_to_lines_cleared)
                 #print(index_list_to_q)
                 #print("max")
 
-                # 全予測の最大 q
+                # 全予測の最大 q の index list
                 max_index_list = max(index_list_to_q, key=index_list_to_q.get)
                 # 1手目の index 入手
                 index = max_index_list[0].item()
@@ -1790,9 +1797,11 @@ class Block_Controller(object):
                 ## 順伝搬し Q 値を取得 (model の __call__ ≒ forward)
                 predictions = predict_model(next_states)[:, 0]
                 ## 直後の Q 値印字
-                print("Q1  : ", predictions[index].item())
+                print("Q1   : ", predictions[index].item())
+                print("Q1-4 : ", index_list_to_q[max_index_list])
+                print("Q1L  : ", index_list_to_lines_cleared[(max_index_list[0], )])
+                #print("Q1L  : ", index_list_to_lines_cleared.values())
 
-                print("Q1-4: ", index_list_to_q[max_index_list])
 
                 #print(max(index_list_to_q, key=index_list_to_q.get))
                 #print(max_index_list[0].item())
@@ -1865,8 +1874,10 @@ class Block_Controller(object):
     # left: 何番目の手番まで探索するか
     # index_list: 手番ごとのindexリスト
     # index_list_to_q: 手番ごとのindexリストから Q 値への変換
+    # index_list_to_lines_cleared: 手番ごとの消去ライン数
     ####################################
-    def get_predictions(self, predict_model, is_train, GameStatus, prev_steps, num_steps, next_order, left, index_list, index_list_to_q, highest_q):
+    def get_predictions(self, predict_model, is_train, GameStatus, prev_steps, num_steps, 
+                        next_order, left, index_list, index_list_to_q, highest_q, index_list_to_lines_cleared):
         ## 次の予測一覧
         next_predictions = []
         ## index_list 複製
@@ -1912,14 +1923,26 @@ class Block_Controller(object):
                 # 次の画面ボード (torch) をひっぱってくる
                 next_state = next_states[index, :]
                 #print(next_order, ":", next_state)
+
+                # next_state Numpy に変換し int にして、消せるラインは消しておく
+                lines_cleared, next_state_cleared = self.check_cleared_rows((next_state.numpy().astype(int))[0])
+                #print(next_order, ":", next_state.numpy().astype(int))
+                #if lines_cleared > 0:
+                #    print("##############")
+                #    print((next_state.numpy().astype(int))[0])
+                #    print("===")
+                #    print(next_state_cleared)
+
+                # 消したライン数を保存
+                index_list_to_lines_cleared[tuple(new_index_list)] = lines_cleared
+
                 # Numpy に変換し int にして、1次元化
                 #next_predict_backboard.append(np.ravel(next_state.numpy().astype(int)))
                 #print(predict_order,":", next_predict_backboard[predict_order])
         
-                # next_state Numpy に変換し int にして、1次元化
-                next_backboard = np.ravel(next_state.numpy().astype(int))
-                # 消せるラインは消しておく
-                lines_cleared, next_backboard = self.check_cleared_rows(next_backboard)
+                # 画面ボードを1次元化
+                next_backboard = np.ravel(next_state_cleared)
+                #next_backboard = np.ravel(next_state.numpy().astype(int))
 
                 # 次の予想手リスト
                 next_steps = self.get_next_func(next_backboard,
@@ -1928,9 +1951,9 @@ class Block_Controller(object):
                 #GameStatus["block_info"]["nextShapeList"]["element"+str(1)]["direction_range"]
     
                 ## 次の予測を上位 num_steps 実施, next_order 番目から left 番目まで予測
-                new_index_list, index_list_to_q, new_next_actions, new_next_states \
+                new_index_list, index_list_to_q, new_next_actions, new_next_states, index_list_to_lines_cleared \
                                 = self.get_predictions(predict_model, is_train, GameStatus, 
-                                    next_steps, num_steps, next_order+1, left, new_index_list, index_list_to_q, highest_q)
+                                    next_steps, num_steps, next_order+1, left, new_index_list, index_list_to_q, highest_q, index_list_to_lines_cleared)
                 # 次のカウント
                 #predict_order += 1
         # 再帰終了
@@ -1949,7 +1972,7 @@ class Block_Controller(object):
 
 
         ## 次の予測一覧とQ値, および最初の action, state を返す
-        return new_index_list, index_list_to_q, next_actions, next_states
+        return new_index_list, index_list_to_q, next_actions, next_states, index_list_to_lines_cleared
 
     ####################################
     # テトリミノが配置できる左端と右端の座標を返す
