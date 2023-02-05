@@ -1348,7 +1348,7 @@ class Block_Controller(object):
         reward -= self.reward_weight[0] * bampiness 
         ## 最大高さ罰
         if max_height > self.max_height_relax:
-            reward -= self.reward_weight[1] * max(0,max_height)
+            reward -= self.reward_weight[1] * max(0, max_height)
         ## 穴の数罰
         reward -= self.reward_weight[2] * hole_num
         ## 穴の上のブロック数罰
@@ -1357,7 +1357,8 @@ class Block_Controller(object):
         reward += tetris_reward * self.tetris_fill_reward
         ## 左端が高すぎる場合の罰
         if left_side_height > self.bumpiness_left_side_relax:
-            reward -= (left_side_height - self.bumpiness_left_side_relax) * self.left_side_height_penalty
+            reward -= max(0, (left_side_height - self.bumpiness_left_side_relax) * self.left_side_height_penalty)
+            #reward -= (left_side_height - self.bumpiness_left_side_relax - 4) * self.left_side_height_penalty
 
         self.epoch_reward += reward 
 
@@ -1438,7 +1439,7 @@ class Block_Controller(object):
         self.board_data_height = GameStatus["field_info"]["height"]
 
         curr_shape_class = GameStatus["block_info"]["currentShape"]["class"]
-        next_shape_class= GameStatus["block_info"]["nextShape"]["class"]
+        next_shape_class = GameStatus["block_info"]["nextShape"]["class"]
 
         ##################
         # next shape info
@@ -1514,19 +1515,37 @@ class Block_Controller(object):
                 #print(index_list_to_q)
                 #print("max")
 
-                # 全予測の最大 q
+                ## 全予測の最大 q の index
                 max_index_list = max(index_list_to_q, key=index_list_to_q.get)
                 #print(max(index_list_to_q, key=index_list_to_q.get))
                 #print(max_index_list[0].item())
                 #print (len(next_steps))
                 #print("============================")
-                # 乱数が epsilon より小さい場合は
+
+                ## 乱数が epsilon より小さい場合は
                 if random_action:
                     # index を乱数とする
                     index = randint(0, len(next_steps) - 1)
                 else:
                     # 1手目の index 入手
                     index = max_index_list[0].item()
+                    ## index_list_to_lines_cleared を初手だけに限定
+                    index_list_to_lines_cleared = {k: v for k, v in index_list_to_lines_cleared.items() if len(k) == 1}
+                    # print (index_list_to_lines_cleared.keys())
+
+                    ## index_list_to_lines_cleared 数が 4の場合はそれを優先する
+                    max_index_list_lines_cleared = max(index_list_to_lines_cleared, key=index_list_to_lines_cleared.get)
+                    if index_list_to_lines_cleared[max_index_list_lines_cleared] == 4:
+                        index = max_index_list_lines_cleared[0].item()
+                        print("Q1L4 : ", index_list_to_lines_cleared[(max_index_list[0], )])
+                        print("L1L4 : ", index_list_to_lines_cleared[max_index_list_lines_cleared])
+                    ## index_list_to_lines_cleared 数が 3でもIミノの場合は優先
+                    if  index_list_to_lines_cleared[max_index_list_lines_cleared] == 3 and curr_piece_id == 1:
+                        index = max_index_list_lines_cleared[0].item()
+                        print("Q1L3 : ", index_list_to_lines_cleared[(max_index_list[0], )])
+                        print("L1L3 : ", index_list_to_lines_cleared[max_index_list_lines_cleared])
+
+
             else:
                 # 次の状態一覧の action と states で配列化
                 #    next_actions  = Tuple (テトリミノ画面ボードX座標, テトリミノ回転状態)　一覧
@@ -1790,21 +1809,36 @@ class Block_Controller(object):
                 # 1手目の index 入手
                 index = max_index_list[0].item()
                 
-                ## debug
-                print("============================")
-                print(max_index_list)
 
-                ## 順伝搬し Q 値を取得 (model の __call__ ≒ forward)
-                predictions = predict_model(next_states)[:, 0]
-                ## 直後の Q 値印字
-                print("Q1   : ", predictions[index].item())
-                print("Q1-4 : ", index_list_to_q[max_index_list])
-                print("Q1L  : ", index_list_to_lines_cleared[(max_index_list[0], )])
-                #print("Q1L  : ", index_list_to_lines_cleared.values())
+                ## debug 直後の Q 値印字
+                # 順伝搬し Q 値を取得 (model の __call__ ≒ forward)
+                #predictions = predict_model(next_states)[:, 0]
+                #print("============================")
+                #print("Q1   : ", predictions[index].item())
+                #print("Q1-4 : ", index_list_to_q[max_index_list])
+                #print("Q1L  : ", index_list_to_lines_cleared[(max_index_list[0], )])
+                #print("Q1La : ", index_list_to_lines_cleared.values())
 
 
                 #print(max(index_list_to_q, key=index_list_to_q.get))
                 #print(max_index_list[0].item())
+
+
+                ## index_list_to_lines_cleared を初手だけに限定
+                index_list_to_lines_cleared = {k: v for k, v in index_list_to_lines_cleared.items() if len(k) == 1}
+                # print (index_list_to_lines_cleared.keys())
+
+                ## index_list_to_lines_cleared 数が 4の場合はそれを優先する
+                max_index_list_lines_cleared = max(index_list_to_lines_cleared, key=index_list_to_lines_cleared.get)
+                if index_list_to_lines_cleared[max_index_list_lines_cleared] == 4:
+                    index = max_index_list_lines_cleared[0].item()
+                    print("Q1L4 : ", index_list_to_lines_cleared[(max_index_list[0], )])
+                    print("L1L4 : ", index_list_to_lines_cleared[max_index_list_lines_cleared])
+                ## index_list_to_lines_cleared 数が 3でもIミノの場合は優先
+                if  index_list_to_lines_cleared[max_index_list_lines_cleared] == 3 and curr_piece_id == 1:
+                    index = max_index_list_lines_cleared[0].item()
+                    print("Q1L3 : ", index_list_to_lines_cleared[(max_index_list[0], )])
+                    print("L1L3 : ", index_list_to_lines_cleared[max_index_list_lines_cleared])
 
 
             else:
@@ -1876,8 +1910,8 @@ class Block_Controller(object):
     # index_list_to_q: 手番ごとのindexリストから Q 値への変換
     # index_list_to_lines_cleared: 手番ごとの消去ライン数
     ####################################
-    def get_predictions(self, predict_model, is_train, GameStatus, prev_steps, num_steps, 
-                        next_order, left, index_list, index_list_to_q, highest_q, index_list_to_lines_cleared):
+    def get_predictions(self, predict_model, is_train, GameStatus, prev_steps, num_steps, next_order, 
+                        left, index_list, index_list_to_q, highest_q, index_list_to_lines_cleared):
         ## 次の予測一覧
         next_predictions = []
         ## index_list 複製
@@ -1927,6 +1961,8 @@ class Block_Controller(object):
                 ## next_state Numpy に変換し int にして、消せるラインをカウント
                 lines_cleared, next_state_cleared = self.check_cleared_rows((next_state.numpy().astype(int))[0])
                 #print(next_order, ":", next_state.numpy().astype(int))
+
+                ## debug
                 #if lines_cleared > 0:
                 #    print("##############")
                 #    print((next_state.numpy().astype(int))[0])
@@ -1954,8 +1990,8 @@ class Block_Controller(object):
     
                 ## 次の予測を上位 num_steps 実施, next_order 番目から left 番目まで予測
                 new_index_list, index_list_to_q, new_next_actions, new_next_states, index_list_to_lines_cleared \
-                                = self.get_predictions(predict_model, is_train, GameStatus, 
-                                    next_steps, num_steps, next_order+1, left, new_index_list, index_list_to_q, highest_q, index_list_to_lines_cleared)
+                                = self.get_predictions(predict_model, is_train, GameStatus, next_steps, num_steps, next_order+1,
+                                            left, new_index_list, index_list_to_q, highest_q, index_list_to_lines_cleared)
                 # 次のカウント
                 #predict_order += 1
         # 再帰終了
@@ -1972,6 +2008,13 @@ class Block_Controller(object):
             #print (new_index_list, highest_q, now_q)
             index_list_to_q[tuple(new_index_list)] = highest_q
 
+            ## 次の画面ボード (torch) をひっぱってくる
+            next_state = next_states[top_indices[0], :]
+
+            ## next_state Numpy に変換し int にして、消せるラインをカウント
+            lines_cleared, next_state_cleared = self.check_cleared_rows((next_state.numpy().astype(int))[0])
+            ## 消したライン数を保存
+            index_list_to_lines_cleared[tuple(new_index_list)] = lines_cleared
 
         ## 次の予測一覧とQ値, および最初の action, state を返す
         return new_index_list, index_list_to_q, next_actions, next_states, index_list_to_lines_cleared
