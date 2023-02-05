@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import pprint
 import random
 import copy
@@ -37,6 +37,9 @@ class Block_Controller(object):
     ShapeNone_index = 0
     CurrentShape_class = 0
     NextShape_class = 0
+
+    ## 時間
+    turn_start_time = 0
 
     ## 第2weight
     # 有効かどうか
@@ -200,6 +203,12 @@ class Block_Controller(object):
             self.time_disp = cfg["common"]["time_disp"]
         else:
             self.time_disp = False
+
+        # タイムアウト時間 ms
+        if 'time_out' in cfg["common"]:
+            self.time_out = cfg["common"]["time_out"]
+        else:
+            self.time_out = 5000
 
         ####################
         #=====Set tetris parameter=====
@@ -1417,7 +1426,7 @@ class Block_Controller(object):
     ####################################
     def GetNextMove(self, nextMove, GameStatus, yaml_file=None,weight=None):
 
-        t1 = datetime.now()
+        self.turn_start_time = datetime.now()
         # RESET 関数設定 callback function 代入 (Game Over 時)
         nextMove["option"]["reset_callback_function_addr"] = self.update
         # mode の取得 (train である) 
@@ -1466,7 +1475,7 @@ class Block_Controller(object):
             self.skip_drop = [-1, -1, -1]
             ## 終了時刻
             if self.time_disp:
-                print(datetime.now()-t1)
+                print(datetime.now()-self.turn_start_time)
             ## 終了   
             return nextMove
         
@@ -1505,13 +1514,14 @@ class Block_Controller(object):
                 index_list = []
                 # index_list_to_q (1番目index, 2番目index, 3番目index ...) => q
                 index_list_to_q = {}
+                index_list_to_q_now = {}
                 # index_list_to_line (1番目index, 2番目index, 3番目index ...) => 消去ライン数
                 index_list_to_lines_cleared = {}
                 ######################
                 # 次の予測を上位predict_next_steps_trainつ実施, 1番目からpredict_next_num_train番目まで予測
-                index_list, index_list_to_q, next_actions, next_states, index_list_to_lines_cleared \
+                index_list, index_list_to_q, index_list_to_q_now, next_actions, next_states, index_list_to_lines_cleared \
                             = self.get_predictions(self.model, True, GameStatus, next_steps, self.predict_next_steps_train, 1, 
-                                    self.predict_next_num_train, index_list, index_list_to_q, -60000, index_list_to_lines_cleared)
+                                    self.predict_next_num_train, index_list, index_list_to_q, index_list_to_q_now, -60000, index_list_to_lines_cleared)
                 #print(index_list_to_q)
                 #print("max")
 
@@ -1537,13 +1547,13 @@ class Block_Controller(object):
                     max_index_list_lines_cleared = max(index_list_to_lines_cleared, key=index_list_to_lines_cleared.get)
                     if index_list_to_lines_cleared[max_index_list_lines_cleared] == 4:
                         index = max_index_list_lines_cleared[0].item()
-                        print("Q1L4 : ", index_list_to_lines_cleared[(max_index_list[0], )])
-                        print("L1L4 : ", index_list_to_lines_cleared[max_index_list_lines_cleared])
+                        #print("Q1L4 : ", index_list_to_lines_cleared[(max_index_list[0], )])
+                        #print("L1L4 : ", index_list_to_lines_cleared[max_index_list_lines_cleared])
                     ## index_list_to_lines_cleared 数が 3でもIミノの場合は優先
                     if  index_list_to_lines_cleared[max_index_list_lines_cleared] == 3 and curr_piece_id == 1:
                         index = max_index_list_lines_cleared[0].item()
-                        print("Q1L3 : ", index_list_to_lines_cleared[(max_index_list[0], )])
-                        print("L1L3 : ", index_list_to_lines_cleared[max_index_list_lines_cleared])
+                        #print("Q1L3 : ", index_list_to_lines_cleared[(max_index_list[0], )])
+                        #print("L1L3 : ", index_list_to_lines_cleared[max_index_list_lines_cleared])
 
 
             else:
@@ -1794,13 +1804,14 @@ class Block_Controller(object):
                 index_list = []
                 # index_list_to_q (1番目index, 2番目index, 3番目index ...) => q
                 index_list_to_q = {}
+                index_list_to_q_now = {}
                 # index_list_to_line (1番目index, 2番目index, 3番目index ...) => 消去ライン数
                 index_list_to_lines_cleared = {}
                 ######################
                 # 次の予測を上位predict_next_stepsつ実施, 1番目からpredict_next_num番目まで予測
-                index_list, index_list_to_q, next_actions, next_states, index_list_to_lines_cleared \
-                            = self.get_predictions(predict_model, False, GameStatus, next_steps, self.predict_next_steps, 
-                                1, self.predict_next_num, index_list, index_list_to_q, -60000, index_list_to_lines_cleared)
+                index_list, index_list_to_q, index_list_to_q_now, next_actions, next_states, index_list_to_lines_cleared \
+                            = self.get_predictions(predict_model, False, GameStatus, next_steps, self.predict_next_steps, 1, 
+                                self.predict_next_num, index_list, index_list_to_q, index_list_to_q_now,-60000, index_list_to_lines_cleared)
                 #print(index_list_to_q)
                 #print("max")
 
@@ -1892,7 +1903,7 @@ class Block_Controller(object):
                     print("Move Down: ", "(", action[0], ",", action[2], ")")
         ## 終了時刻
         if self.time_disp:
-            print(datetime.now()-t1)
+            print(datetime.now()-self.turn_start_time)
         ## 終了
         return nextMove
 
@@ -1907,15 +1918,19 @@ class Block_Controller(object):
     # next_order: いくつ先の手番か
     # left: 何番目の手番まで探索するか
     # index_list: 手番ごとのindexリスト
-    # index_list_to_q: 手番ごとのindexリストから Q 値への変換
-    # index_list_to_lines_cleared: 手番ごとの消去ライン数
+    # index_list_to_q: 手番ごとのindexリストから最大 Q 値への変換辞書
+    # index_list_to_q_now: 手番ごとのindexリストから Q 値への変換辞書
+    # index_list_to_lines_cleared: 手番ごとの消去ライン数辞書
     ####################################
     def get_predictions(self, predict_model, is_train, GameStatus, prev_steps, num_steps, next_order, 
-                        left, index_list, index_list_to_q, highest_q, index_list_to_lines_cleared):
+                        left, index_list, index_list_to_q, index_list_to_q_now, highest_q, index_list_to_lines_cleared):
         ## 次の予測一覧
         next_predictions = []
         ## index_list 複製
         new_index_list = []
+
+        ## Timeout Flag
+        time_out = False
 
         ## 予測の画面ボード
         #next_predict_backboard = []
@@ -1989,13 +2004,19 @@ class Block_Controller(object):
                 #GameStatus["block_info"]["nextShapeList"]["element"+str(1)]["direction_range"]
     
                 ## 次の予測を上位 num_steps 実施, next_order 番目から left 番目まで予測
-                new_index_list, index_list_to_q, new_next_actions, new_next_states, index_list_to_lines_cleared \
+                new_index_list, index_list_to_q, index_list_to_q_now, new_next_actions, new_next_states, index_list_to_lines_cleared \
                                 = self.get_predictions(predict_model, is_train, GameStatus, next_steps, num_steps, next_order+1,
-                                            left, new_index_list, index_list_to_q, highest_q, index_list_to_lines_cleared)
+                                            left, new_index_list, index_list_to_q, index_list_to_q_now, highest_q, index_list_to_lines_cleared)
                 # 次のカウント
                 #predict_order += 1
+
+                # Timeout
+                if (datetime.now() - self.turn_start_time) > timedelta(milliseconds = self.time_out):
+                    time_out = True
+                    break
+
         # 再帰終了
-        else:
+        if left <= next_order or time_out:
             # Top のみ index_list に追加
             new_index_list = index_list.copy()
             new_index_list.append(top_indices[0])
@@ -2007,6 +2028,7 @@ class Block_Controller(object):
             # index_list から q 値への辞書をつくる
             #print (new_index_list, highest_q, now_q)
             index_list_to_q[tuple(new_index_list)] = highest_q
+            index_list_to_q_now[tuple(new_index_list)] = now_q
 
             ## 次の画面ボード (torch) をひっぱってくる
             next_state = next_states[top_indices[0], :]
@@ -2016,8 +2038,12 @@ class Block_Controller(object):
             ## 消したライン数を保存
             index_list_to_lines_cleared[tuple(new_index_list)] = lines_cleared
 
+        ## 最初の起動の場合ログ出力
+        if self.time_disp and next_order == 1 and time_out:
+            print("Timeout: ", len(index_list_to_q))
+
         ## 次の予測一覧とQ値, および最初の action, state を返す
-        return new_index_list, index_list_to_q, next_actions, next_states, index_list_to_lines_cleared
+        return new_index_list, index_list_to_q, index_list_to_q_now, next_actions, next_states, index_list_to_lines_cleared
 
     ####################################
     # テトリミノが配置できる左端と右端の座標を返す

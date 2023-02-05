@@ -26,9 +26,6 @@ common:
   ## Lv2 1回先読み最適化
   #ft_weight: outputs/2022-08-17-20-41-25/trained_model/tetris_epoch949_score203900.pt # 以前の学習結果を利用する場合のファイル 
 
-  log_path: tensorboard
-  time_disp: False
-
   #### 推論用Weight
   #Lv3 穴掘り
   ## 不安定 だが高速
@@ -72,6 +69,13 @@ common:
   predict_weight2_enable_index: 5
   #### model 戻しポイント (最も高い穴の位置下記より高いとき)
   predict_weight2_disable_index: 10
+
+  ## ログ Path
+  log_path: tensorboard
+  ## 時刻表示
+  time_disp: True
+  ## Time Out [ms]
+  time_out_limit: 980
 
 model:
   name: DQN # 学習方式 (MLP DQN)
