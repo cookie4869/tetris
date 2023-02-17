@@ -1799,25 +1799,88 @@ class Block_Controller(object):
 
 
             ##############
-            # model 指定
+            ## model 指定
             predict_model = self.model
             if self.weight2_enable:
                 predict_model = self.model2
 
-            #推論モードに切り替え
+            ##推論モードに切り替え
             predict_model.eval()
 
-            # 次のテトリミノ予測
-            if self.predict_next_num > 0:
-                # index_list [1番目index, 2番目index, 3番目index ...] => q
+
+
+            #######################
+            ##  HOLD モード
+            prediction_skip = False
+            ## I ミノでない場合、かつ HOLD が I ミノの場合 探索する
+            if self.hold_flag and curr_piece_id != 1 and hold_piece_id == 1:
+
+                ## HOLD 消去ライン数の配列取得
+                next_actions_chance, index_to_lines_cleared_chance, max_index_lines_cleared_chance \
+                    = self.get_lines_cleared(curr_backboard, hold_piece_id, hold_shape_class)
+
+                ## 最大消去が 4 lines, 3 lines の場合 HOLD と入れ替え
+                if index_to_lines_cleared_chance[max_index_lines_cleared_chance] > 2:
+
+                    ## Debug
+                    print("chance!")
+                    ## Use hold function
+                    nextMove["strategy"]["use_hold_function"] = "y"
+
+                    ## 次の行動配列変更
+                    index = max_index_lines_cleared_chance
+                    next_actions = next_actions_chance
+
+                    ## 推論処理中断
+                    prediction_skip = True
+
+            ## 上記以外で I ミノ かつ HOLD が I ミノ以外の場合
+            elif self.hold_flag and curr_piece_id == 1 and hold_piece_id != 1:
+
+                ## 消去ライン数の配列取得
+                next_actions_keep, index_to_lines_cleared_keep, max_index_lines_cleared_keep \
+                    = self.get_lines_cleared(curr_backboard, curr_piece_id, curr_shape_class)
+
+                ## 最大消去が 3 lines より低い場合 HOLD と入れ替え
+                if index_to_lines_cleared_keep[max_index_lines_cleared_keep] < 3:
+                    ## Debug
+                    print("hold:", hold_piece_id, " => ", curr_piece_id)
+                    ## Use hold function
+                    nextMove["strategy"]["use_hold_function"] = "y"
+
+                    ## HOLD がない場合
+                    if hold_piece_id == None:
+                        ## 次の行動配列変更 (使わないがエラー回避のため記載)
+                        index = max_index_lines_cleared_keep
+                        next_actions = next_actions_keep
+                        ## 推論処理中断
+                        prediction_skip = True
+                    ## HOLD がある場合
+                    else:
+                        ## テトリミノを hold と入れ替え
+                        curr_piece_id = hold_piece_id
+                        curr_shape_class = hold_shape_class
+
+                        #画面ボードで テトリミノ回転状態 に落下させたときの次の状態一覧を HOLD テトリミノで再作成
+                        next_steps = self.get_next_func(curr_backboard, curr_piece_id, curr_shape_class)
+
+
+
+            #######################
+            ## 次のテトリミノ予測ありの場合 (かつ 推論処理中断でない場合)
+            if self.predict_next_num > 0 and prediction_skip == False:
+
+                ### 次のテトリミノ再帰予測用配列・辞書初期化
+                ## index_list [1番目index, 2番目index, 3番目index ...] => q
                 index_list = []
-                # index_list_to_q (1番目index, 2番目index, 3番目index ...) => q
+                ## index_list_to_q (1番目index, 2番目index, 3番目index ...) => q
                 index_list_to_q = {}
                 index_list_to_q_now = {}
-                # index_list_to_line (1番目index, 2番目index, 3番目index ...) => 消去ライン数
+                ## index_list_to_line (1番目index, 2番目index, 3番目index ...) => 消去ライン数
                 index_list_to_lines_cleared = {}
+
                 ######################
-                # 次の予測を上位predict_next_stepsつ実施, 1番目からpredict_next_num番目まで予測
+                ## 次の予測を上位predict_next_stepsつ実施, 1番目からpredict_next_num番目まで予測
                 index_list, index_list_to_q, index_list_to_q_now, next_actions, next_states, index_list_to_lines_cleared \
                             = self.get_predictions(predict_model, False, GameStatus, next_steps, self.predict_next_steps, 1, 
                                 self.predict_next_num, index_list, index_list_to_q, index_list_to_q_now,-60000, index_list_to_lines_cleared)
@@ -1847,17 +1910,17 @@ class Block_Controller(object):
                     " / ",
                     GameStatus["block_info"]["holdShape"]["index"])
 
+                #### AI の行動補正
+
                 ## index_list_to_lines_cleared を初手だけに限定
                 index_list_to_lines_cleared = {k: v for k, v in index_list_to_lines_cleared.items() if len(k) == 1}
                 # print (index_list_to_lines_cleared.keys())
 
-                ## index_list_to_lines_cleared 数が 4の場合はそれを優先する
+                ## 最大消去数の index 取得
                 max_index_list_lines_cleared = max(index_list_to_lines_cleared, key=index_list_to_lines_cleared.get)
+                ## index_list_to_lines_cleared 数が 4の場合はそれを優先する
                 if index_list_to_lines_cleared[max_index_list_lines_cleared] == 4:
                     index = max_index_list_lines_cleared[0].item()
-                    #print("Q1L4 : ", index_list_to_lines_cleared[(max_index_list[0], )])
-                    #print("L1L4 : ", index_list_to_lines_cleared[max_index_list_lines_cleared])
-                    #print("Q1L1 : ", index_list_to_q_now[(max_index_list_lines_cleared[0], )])
                 ## index_list_to_lines_cleared 数が 3でもIミノの場合は優先
                 elif  index_list_to_lines_cleared[max_index_list_lines_cleared] == 3 and curr_piece_id == 1:
                     index = max_index_list_lines_cleared[0].item()
@@ -1865,16 +1928,10 @@ class Block_Controller(object):
                     #print("L1L3 : ", index_list_to_lines_cleared[max_index_list_lines_cleared])
                     #print("Q1L1 : ", index_list_to_q_now[(max_index_list_lines_cleared[0], )])
 
-                ## HOLD 機能
-                ## 上記以外で I ミノの場合 HOLD する (HOLD が I ミノ以外時限定)
-                elif self.hold_flag and curr_piece_id == 1 \
-                    and GameStatus["block_info"]["holdShape"]["index"] != 1:
-                    ## Use hold function
-                    print("hold:", curr_piece_id)
-                    nextMove["strategy"]["use_hold_function"] = "y"
-
-
-            else:
+                
+            #######################
+            ## 次のテトリミノ予測 なし( かつ推論処理中断でない場合)
+            elif prediction_skip == False:
                 ### 画面ボードの次の状態一覧を action と states にわけ、states を連結
                 next_actions, next_states = zip(*next_steps.items())
                 next_states = torch.stack(next_states)
@@ -2069,6 +2126,47 @@ class Block_Controller(object):
 
         ## 次の予測一覧とQ値, および最初の action, state を返す
         return new_index_list, index_list_to_q, index_list_to_q_now, next_actions, next_states, index_list_to_lines_cleared
+
+
+    ####################################
+    # テトリミノを指定し消去できるライン数の配列を返す
+    # self,
+    # curr_backboard: 現在の画面ボード（1次元）
+    # piece_id, shape_class: piece 種類
+    ####################################
+    def get_lines_cleared(self, curr_backboard, piece_id, shape_class):
+        ###################
+        #画面ボードで テトリミノ回転状態 に落下させたときの次の状態一覧を作成
+        # next_steps
+        #    Key = Tuple (テトリミノ画面ボードX座標, テトリミノ回転状態)
+        #                 テトリミノ Move Down 降下 数, テトリミノ追加移動X座標, テトリミノ追加回転)
+        #    Value = 画面ボード状態
+        next_steps_chance = self.get_next_func(curr_backboard, piece_id, shape_class)
+        ### 画面ボードの次の状態一覧を action と states にわけ、states を連結
+        next_actions_chance, next_states_chance = zip(*next_steps_chance.items())
+        next_states_chance = torch.stack(next_states_chance)
+        ## 順伝搬し Q 値を取得 (model の __call__ ≒ forward)
+        #predictions_chance = predict_model(next_states_chance)[:, 0]
+        ## 最大値の index 取得
+        #index_chance = torch.argmax(predictions_chance).item()
+
+        ## index_to_lines_cleared_chance (index) => 消去ライン数 初期化
+        index_to_lines_cleared_chance = list(range(len(next_states_chance)))
+        ## 画面ボードの次の状態一覧で消去状態を確認
+        for index_chance in range(len(next_states_chance)):
+            ## 次の画面ボード (torch) をひっぱってくる
+            next_state_chance = next_states_chance[index_chance, :]
+
+            ## next_state Numpy に変換し int にして、消せるラインをカウント
+            lines_cleared_chance, next_state_cleared_chance = self.check_cleared_rows((next_state_chance.numpy().astype(int))[0])
+            ## 消したライン数を保存
+            index_to_lines_cleared_chance[index_chance] = lines_cleared_chance
+
+        ## 最大消去数の index 取得
+        max_index_lines_cleared_chance = index_to_lines_cleared_chance.index(max(index_to_lines_cleared_chance))
+
+        ## 次のアクション配列, index から消去ライン数の配列, 最大消去数の index を返す
+        return next_actions_chance, index_to_lines_cleared_chance, max_index_lines_cleared_chance
 
     ####################################
     # テトリミノが配置できる左端と右端の座標を返す
