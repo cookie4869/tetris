@@ -73,7 +73,7 @@ common:
   ## ログ Path
   log_path: tensorboard
   ## 時刻表示
-  time_disp: True
+  time_disp: False
   ## Time Out [ms]
   time_out_limit: 980
 
@@ -127,7 +127,8 @@ train:
   hole_top_limit_height: 1 # 穴の上の積み上げペナルティ下限絶対高さ、この高さより上のときのみペナルティ有効 (22: 無効, -1:制限なし)
   hole_top_limit: 0 # 穴の上の積み上げペナルティ 穴の位置が左記の相対高さより高いときのみ
 
-  move_down_flag: 0 # Move Down (降下)有効化 #DQN限定
+  move_down_flag: 0 # Move Down (降下)有効化 #DQN限定  (0: 無効, 1: 有効)
+  hold_flag: True # HOLD 有効化 (False: 無効, True: 有効)　predict_next_num が 1 以上の場合のみ有効
 
   predict_next_num: 4 # 次のテトリミノ予測数 (0: 無効) #DQN限定
   predict_next_steps: 5 #  1つの手番で候補手をいくつ探すか #DQN限定

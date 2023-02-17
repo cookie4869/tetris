@@ -174,6 +174,12 @@ class Block_Controller(object):
         else:
             self.move_down_flag = 0
 
+        # HOLD 有効化
+        if 'hold_flag' in cfg["train"]:
+            self.hold_flag = cfg["train"]["hold_flag"]
+        else:
+            self.hold_flag = False
+
         # 次のテトリミノ予測数
         if cfg["model"]["name"]=="DQN" and ('predict_next_num' in cfg["train"]):
             self.predict_next_num = cfg["train"]["predict_next_num"]
@@ -205,10 +211,10 @@ class Block_Controller(object):
             self.time_disp = False
 
         # タイムアウト時間 ms
-        if 'time_out' in cfg["common"]:
-            self.time_out = cfg["common"]["time_out"]
+        if 'time_out_limit' in cfg["common"]:
+            self.time_out_limit = cfg["common"]["time_out_limit"]
         else:
-            self.time_out = 5000
+            self.time_out_limit = 5000
 
         ####################
         #=====Set tetris parameter=====
@@ -1425,6 +1431,7 @@ class Block_Controller(object):
     ####################################
     ####################################
     def GetNextMove(self, nextMove, GameStatus, yaml_file=None,weight=None):
+        #print("============================")
 
         self.turn_start_time = datetime.now()
         # RESET 関数設定 callback function 代入 (Game Over 時)
@@ -1449,12 +1456,14 @@ class Block_Controller(object):
 
         curr_shape_class = GameStatus["block_info"]["currentShape"]["class"]
         next_shape_class = GameStatus["block_info"]["nextShape"]["class"]
+        hold_shape_class = GameStatus["block_info"]["holdShape"]["class"]
 
         ##################
         # next shape info
         self.ShapeNone_index = GameStatus["debug_info"]["shape_info"]["shapeNone"]["index"]
-        curr_piece_id =GameStatus["block_info"]["currentShape"]["index"]
-        next_piece_id =GameStatus["block_info"]["nextShape"]["index"]
+        curr_piece_id = GameStatus["block_info"]["currentShape"]["index"]
+        next_piece_id = GameStatus["block_info"]["nextShape"]["index"]
+        hold_piece_id = GameStatus["block_info"]["holdShape"]["index"]
 
         #reshape_backboard = self.get_reshape_backboard(curr_backboard)
         #print(reshape_backboard)
@@ -1819,21 +1828,24 @@ class Block_Controller(object):
                 max_index_list = max(index_list_to_q, key=index_list_to_q.get)
                 # 1手目の index 入手
                 index = max_index_list[0].item()
-                
 
                 ## debug 直後の Q 値印字
-                # 順伝搬し Q 値を取得 (model の __call__ ≒ forward)
-                #predictions = predict_model(next_states)[:, 0]
                 #print("============================")
-                #print("Q1   : ", predictions[index].item())
-                #print("Q1-4 : ", index_list_to_q[max_index_list])
+                #print("Q1L1 : ", index_list_to_q_now[(max_index_list[0], )])
+                #print("Q1L4 : ", index_list_to_q[max_index_list])
                 #print("Q1L  : ", index_list_to_lines_cleared[(max_index_list[0], )])
-                #print("Q1La : ", index_list_to_lines_cleared.values())
-
 
                 #print(max(index_list_to_q, key=index_list_to_q.get))
                 #print(max_index_list[0].item())
 
+                ## Debug
+                print(GameStatus["block_info"]["nextShapeList"]["element0"]["index"], 
+                    GameStatus["block_info"]["nextShapeList"]["element1"]["index"], 
+                    GameStatus["block_info"]["nextShapeList"]["element2"]["index"], 
+                    GameStatus["block_info"]["nextShapeList"]["element3"]["index"], 
+                    GameStatus["block_info"]["nextShapeList"]["element4"]["index"], 
+                    " / ",
+                    GameStatus["block_info"]["holdShape"]["index"])
 
                 ## index_list_to_lines_cleared を初手だけに限定
                 index_list_to_lines_cleared = {k: v for k, v in index_list_to_lines_cleared.items() if len(k) == 1}
@@ -1843,13 +1855,23 @@ class Block_Controller(object):
                 max_index_list_lines_cleared = max(index_list_to_lines_cleared, key=index_list_to_lines_cleared.get)
                 if index_list_to_lines_cleared[max_index_list_lines_cleared] == 4:
                     index = max_index_list_lines_cleared[0].item()
-                    print("Q1L4 : ", index_list_to_lines_cleared[(max_index_list[0], )])
-                    print("L1L4 : ", index_list_to_lines_cleared[max_index_list_lines_cleared])
+                    #print("Q1L4 : ", index_list_to_lines_cleared[(max_index_list[0], )])
+                    #print("L1L4 : ", index_list_to_lines_cleared[max_index_list_lines_cleared])
+                    #print("Q1L1 : ", index_list_to_q_now[(max_index_list_lines_cleared[0], )])
                 ## index_list_to_lines_cleared 数が 3でもIミノの場合は優先
-                if  index_list_to_lines_cleared[max_index_list_lines_cleared] == 3 and curr_piece_id == 1:
+                elif  index_list_to_lines_cleared[max_index_list_lines_cleared] == 3 and curr_piece_id == 1:
                     index = max_index_list_lines_cleared[0].item()
-                    print("Q1L3 : ", index_list_to_lines_cleared[(max_index_list[0], )])
-                    print("L1L3 : ", index_list_to_lines_cleared[max_index_list_lines_cleared])
+                    #print("Q1L3 : ", index_list_to_lines_cleared[(max_index_list[0], )])
+                    #print("L1L3 : ", index_list_to_lines_cleared[max_index_list_lines_cleared])
+                    #print("Q1L1 : ", index_list_to_q_now[(max_index_list_lines_cleared[0], )])
+
+                ## HOLD 機能
+                ## 上記以外で I ミノの場合 HOLD する (HOLD が I ミノ以外時限定)
+                elif self.hold_flag and curr_piece_id == 1 \
+                    and GameStatus["block_info"]["holdShape"]["index"] != 1:
+                    ## Use hold function
+                    print("hold:", curr_piece_id)
+                    nextMove["strategy"]["use_hold_function"] = "y"
 
 
             else:
@@ -1968,6 +1990,9 @@ class Block_Controller(object):
                 if now_q > highest_q:
                     # 最高値とする
                     highest_q = now_q
+                # index_list から q 値への辞書をつくる
+                index_list_to_q[tuple(new_index_list)] = highest_q
+                index_list_to_q_now[tuple(new_index_list)] = now_q
 
                 ## 次の画面ボード (torch) をひっぱってくる
                 next_state = next_states[index, :]
@@ -2011,7 +2036,7 @@ class Block_Controller(object):
                 #predict_order += 1
 
                 # Timeout
-                if (datetime.now() - self.turn_start_time) > timedelta(milliseconds = self.time_out):
+                if (datetime.now() - self.turn_start_time) > timedelta(milliseconds = self.time_out_limit):
                     time_out = True
                     break
 

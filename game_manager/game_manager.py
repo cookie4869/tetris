@@ -59,7 +59,6 @@ def get_option(game_time, mode, drop_interval, random_seed, obstacle_height, obs
     argparser.add_argument('--art_config_filepath', type=str,
                            default=art_config_filepath,
                            help='art_config file path')
-
     return argparser.parse_args()
 
 #####################################################################
@@ -336,6 +335,7 @@ class Game_Manager(QMainWindow):
                     nextMove["strategy"]["direction"] = d
                     nextMove["strategy"]["x"] = x
                     nextMove["strategy"]["y_operation"] = y
+                    nextMove["strategy"]["y_moveblocknum"] = 1
                     self.nextMove = nextMove
                 else:
                     self.nextMove = BLOCK_CONTROLLER.GetNextMove(nextMove, GameStatus)
@@ -369,6 +369,8 @@ class Game_Manager(QMainWindow):
                     if isExchangeHoldShape == False:
                         # if isExchangeHoldShape is False, this means no holdshape exists. 
                         # so it needs to return immediately to use new shape.
+                        # init nextMove
+                        self.nextMove = None
                         return
 
                 k = 0
