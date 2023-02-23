@@ -22,12 +22,9 @@ common:
   ## Level 2 左端積み上げ制限
   #ft_weight: outputs/2023-01-24-23-09-09/trained_model/tetris_epoch26_score4300.pt
   ## Lv2 4回先読み最適化 強い,左はし空け 6段0.8, 高さ緩和 7
-  ft_weight: outputs/2022-08-31-08-05-53/trained_model/tetris_epoch1701_score189000.pt
+  #ft_weight: outputs/2022-08-31-08-05-53/trained_model/tetris_epoch1701_score189000.pt
   ## Lv2 1回先読み最適化
-  #ft_weight: outputs/2022-08-17-20-41-25/trained_model/tetris_epoch949_score203900.pt # 以前の学習結果を利用する場合のファイル 
-
-  log_path: tensorboard
-  time_disp: False
+  ft_weight: outputs/2022-08-17-20-41-25/trained_model/tetris_epoch949_score203900.pt # 以前の学習結果を利用する場合のファイル 
 
   #### 推論用Weight
   #Lv3 穴掘り
@@ -44,12 +41,21 @@ common:
   ##
   #predict_weight: outputs/2022-09-03-11-40-46/trained_model/tetris_epoch754_score17400.pt
 
+
+  ## Level 2 4回先読み最適化 強い,左はし空け 9段0.8, 高さ緩和 9
+  #predict_weight: outputs/2023-02-21-07-10-03/trained_model/tetris_epoch8500_score2600.pt
+  ## Level 2 4回先読み最適化 強い,左はし空け 9段0.7, 高さ緩和 9
+  #predict_weight: outputs/2023-02-20-08-59-27/trained_model/tetris_epoch8195_score20400.pt
+  ## Level 2 4回先読み最適化 強い,左はし空け 9段0.6, 高さ緩和 9
+  #predict_weight: outputs/2023-02-18-22-28-14/trained_model/tetris_epoch9986_score20800.pt
+  ## Level 2 4回先読み最適化 強い,左はし空け 9段0.4, 高さ緩和 9
+  #predict_weight: outputs/2023-02-18-02-07-54/trained_model/tetris_epoch9867_score20600.pt
   ## Level 2 左端積み上げ制限
   #predict_weight: outputs/2023-01-23-15-27-05/trained_model/tetris_epoch4000_score6400.pt
   ## Level 2 積み上げ (OBSTACLE_HEIGHT = 5で学習)
   #predict_weight: outputs/2022-09-09-08-54-47/trained_model/tetris_epoch2356_score26800.pt
   ## Level 2 4回先読み最適化 強い,左はし空け 6段0.8, 高さ緩和 7
-  predict_weight: outputs/2022-08-31-08-05-53/trained_model/tetris_epoch1701_score189000.pt
+  #predict_weight: outputs/2022-08-31-08-05-53/trained_model/tetris_epoch1701_score189000.pt
   ## Level 2 1回先読み最適化
   #predict_weight: outputs/2022-08-17-20-41-25/trained_model/tetris_epoch949_score203900.pt # 以前の学習結果を利用する場合のファイル 
   ## Level 2 推測前
@@ -73,6 +79,13 @@ common:
   #### model 戻しポイント (最も高い穴の位置下記より高いとき)
   predict_weight2_disable_index: 10
 
+  ## ログ Path
+  log_path: tensorboard
+  ## 時刻表示
+  time_disp: False
+  ## Time Out [ms]
+  time_out_limit: 980
+
 model:
   name: DQN # 学習方式 (MLP DQN)
   finetune: True # 以前の学習結果を利用する (True False)
@@ -86,7 +99,7 @@ train:
   lr_step_size: 1000 # SGD 用 ... step size 学習率更新タイミングの EPOCH 数  (1 to num_epoch)
   num_epoch: 10000 # 試行回数 (lr_step_size to num_epoch)
   num_decay_epochs: 3500 # ε収束させる試行回数
-  initial_epsilon: 5.0e-2 # ε... 学習が局所解にならないように乱数で動かして最適値する。学習初期は 1, 初期値 Fine Tune の場合は小さめに  (0 to 1.0)
+  initial_epsilon: 1.0e-3 # ε... 学習が局所解にならないように乱数で動かして最適値する。学習初期は 1, 初期値 Fine Tune の場合は小さめに  (0 to 1.0)
   final_epsilon: 1.0e-3 # 上記εを漸減させたときの最終値 num_decay_epochs 試行後  (0 to final_epsilon)
   batch_size: 512 # バッチサイズ　確率的勾配降下法における、全パラメータのうちランダム抽出して勾配を求めるパラメータの数 (2^n)
   gamma: 0.8 # 割引率 ... t+1 の報酬をどの程度割り引いて考えるか (0 to 1.0)
@@ -123,7 +136,8 @@ train:
   hole_top_limit_height: 1 # 穴の上の積み上げペナルティ下限絶対高さ、この高さより上のときのみペナルティ有効 (22: 無効, -1:制限なし)
   hole_top_limit: 0 # 穴の上の積み上げペナルティ 穴の位置が左記の相対高さより高いときのみ
 
-  move_down_flag: 0 # Move Down (降下)有効化 #DQN限定
+  move_down_flag: 0 # Move Down (降下)有効化 #DQN限定  (0: 無効, 1: 有効)
+  hold_flag: True # HOLD 有効化 (False: 無効, True: 有効)
 
   predict_next_num: 4 # 次のテトリミノ予測数 (0: 無効) #DQN限定
   predict_next_steps: 5 #  1つの手番で候補手をいくつ探すか #DQN限定

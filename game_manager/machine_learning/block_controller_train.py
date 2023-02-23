@@ -747,7 +747,9 @@ class Block_Controller(object):
         self.skip_drop = [-1, -1, -1]
 
     ####################################
-    #削除されるLineを数える (2次元)
+    # 削除されるLineを数える
+    ###引数:
+    #  reshape_board: 2次元画面ボード
     ####################################
     def check_cleared_rows(self, reshape_board):
         board_new = np.copy(reshape_board)
@@ -763,6 +765,8 @@ class Block_Controller(object):
 
     ####################################
     ## でこぼこ度, 高さ合計, 高さ最大, 高さ最小を求める
+    ###引数:
+    #  reshape_board: 2次元画面ボード
     ####################################
     def get_bumpiness_and_height(self, reshape_board):
         # ボード上で 0 でないもの(テトリミノのあるところ)を抽出
@@ -803,6 +807,7 @@ class Block_Controller(object):
 
     ####################################
     ## 穴の数, 穴の上積み上げ Penalty, 最も高い穴の位置を求める
+    ###引数:
     # reshape_board: 2次元画面ボード
     # min_height: 到達可能の最下層より1行下の穴の位置をチェック -1 で無効 hole_top_penalty 無効
     ####################################
@@ -874,6 +879,8 @@ class Block_Controller(object):
     
     ####################################
     # 現状状態の各種パラメータ取得 (MLP
+    ###引数:
+    #  reshape_board: 2次元画面ボード
     ####################################
     def get_state_properties(self, reshape_board):
         #削除された行の報酬
@@ -887,6 +894,8 @@ class Block_Controller(object):
 
     ####################################
     # 現状状態の各種パラメータ取得　高さ付き 今は使っていない
+    ###引数:
+    #  reshape_board: 2次元画面ボード
     ####################################
     def get_state_properties_v2(self, reshape_board):
         # 削除された行の報酬
@@ -901,20 +910,26 @@ class Block_Controller(object):
 
     ####################################
     # 最大の高さを取得
-    # get_bumpiness_and_height にとりこまれたので廃止
+    # get_bumpiness_and_height にとりこまれている
+    ###引数:
+    #  reshape_board: 2次元画面ボード
+    ###返値:
+    #  max_row: 最大高さ
     ####################################
     def get_max_height(self, reshape_board):
         # X 軸のセルを足し算する
         sum_ = np.sum(reshape_board,axis=1)
         #print(sum_)
         row = 0
-        # X 軸の合計が0になる Y 軸を探す
+        # X 軸の合計が0になる Y 軸を上から探す
         while row < self.height and sum_[row] ==0:
             row += 1
         return self.height - row
 
     ####################################
     # 左端以外埋まっているか？
+    ###引数:
+    #  reshape_board: 2次元画面ボード
     ####################################
     def get_tetris_fill_reward(self, reshape_board):
         # 無効の場合
@@ -943,6 +958,10 @@ class Block_Controller(object):
 
     ####################################
     # line 段目が左端以外そろっているか
+    ###引数:
+    #  reshape_board: 2次元画面ボード
+    #  sum_: 各段のブロック数
+    #  line: 調査対象の段数
     ####################################
     def get_line_right_fill(self, reshape_board, sum_, line):
         # 1段目が端以外そろっている
@@ -1281,7 +1300,7 @@ class Block_Controller(object):
 
     ####################################
     # 配置できるか確認する
-    # board: 1次元座標
+    # board: 1次元画面ボード
     # coordArray: テトリミノ2次元座標
     ####################################
     def try_move_(self, board, coordArray):
@@ -1324,7 +1343,11 @@ class Block_Controller(object):
 
 
     ####################################
-    #ボードを２次元化
+    #画面ボードを２次元化
+    ###引数:
+    #  curr_backboard: 1次元画面ボード
+    ###返値:
+    #  reshape_board: 2次元画面ボード
     ####################################
     def get_reshape_backboard(self,board):
         board = np.array(board)
@@ -1337,6 +1360,10 @@ class Block_Controller(object):
     ####################################
     #報酬を計算(2次元用) 
     #reward_func から呼び出される
+    ###引数:
+    #  curr_backboard: 1次元画面ボード
+    #  action: 次の操作
+    #  curr_shape_class: 今のテトリミノ
     ####################################
     def step_v2(self, curr_backboard, action, curr_shape_class):
         x0, direction0, third_y, forth_direction, fifth_x = action
@@ -1389,6 +1416,10 @@ class Block_Controller(object):
     ####################################
     #報酬を計算(1次元用) 
     #reward_func から呼び出される
+    ###引数:
+    #  curr_backboard: 1次元画面ボード
+    #  action: 次の操作
+    #  curr_shape_class: 今のテトリミノ
     ####################################
     def step(self, curr_backboard, action, curr_shape_class):
         x0, direction0, third_y, forth_direction, fifth_x = action
@@ -1819,11 +1850,28 @@ class Block_Controller(object):
                 next_actions_chance, index_to_lines_cleared_chance, max_index_lines_cleared_chance \
                     = self.get_lines_cleared(curr_backboard, hold_piece_id, hold_shape_class)
 
-                ## 最大消去が 4 lines, 3 lines の場合 HOLD と入れ替え
-                if index_to_lines_cleared_chance[max_index_lines_cleared_chance] > 2:
+                ## 最大消去の場合の操作取得
+                x0_chance, direction0_chance, third_y_chance, forth_direction_chance, fifth_x_chance = next_actions_chance[max_index_lines_cleared_chance]
+                ## 画面ボードデータをコピーして指定座標にテトリミノを配置し落下させた画面ボードとy座標を返す
+                board_chance, drop_y_chance = self.getBoard(curr_backboard, hold_shape_class, direction0_chance, x0_chance, -1)
+                ##ボードを２次元化
+                reshape_board_chance = self.get_reshape_backboard(board_chance)
+                # 最大高さ取得
+                max_row = self.get_max_height(reshape_board_chance)
+                # Debug
+                #print(reshape_board_chance, max_row)
+
+
+                ### 下記場合 HOLD と入れ替え
+                ## 最大消去が 2 lines かつ 高さ 10 より大きい もしくは
+                ## 最大消去が 3 lines かつ 高さ 5より大きい もしくは
+                ## 最大消去が 4 lines,
+                if index_to_lines_cleared_chance[max_index_lines_cleared_chance] == 2 and max_row > 10 \
+                    or index_to_lines_cleared_chance[max_index_lines_cleared_chance] == 3 and max_row > 6 \
+                    or index_to_lines_cleared_chance[max_index_lines_cleared_chance] == 4 :
 
                     ## Debug
-                    print("chance!")
+                    print("chance!", index_to_lines_cleared_chance[max_index_lines_cleared_chance], max_row)
                     ## Use hold function
                     nextMove["strategy"]["use_hold_function"] = "y"
 
@@ -1902,13 +1950,13 @@ class Block_Controller(object):
                 #print(max_index_list[0].item())
 
                 ## Debug
-                print(GameStatus["block_info"]["nextShapeList"]["element0"]["index"], 
-                    GameStatus["block_info"]["nextShapeList"]["element1"]["index"], 
-                    GameStatus["block_info"]["nextShapeList"]["element2"]["index"], 
-                    GameStatus["block_info"]["nextShapeList"]["element3"]["index"], 
-                    GameStatus["block_info"]["nextShapeList"]["element4"]["index"], 
-                    " / ",
-                    GameStatus["block_info"]["holdShape"]["index"])
+                #print(GameStatus["block_info"]["nextShapeList"]["element0"]["index"], 
+                #    GameStatus["block_info"]["nextShapeList"]["element1"]["index"], 
+                #    GameStatus["block_info"]["nextShapeList"]["element2"]["index"], 
+                #    GameStatus["block_info"]["nextShapeList"]["element3"]["index"], 
+                #    GameStatus["block_info"]["nextShapeList"]["element4"]["index"], 
+                #    " / ",
+                #    GameStatus["block_info"]["holdShape"]["index"])
 
                 #### AI の行動補正
 
