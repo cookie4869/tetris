@@ -5,7 +5,7 @@ import sys
 import subprocess
 from argparse import ArgumentParser
 
-def get_option(game_level, game_time, mode, random_seed, drop_interval, resultlogjson, train_yaml, predict_weight, user_name, ShapeListMax, BlockNumMax, art_config_filepath):
+def get_option(game_level, game_time, mode, random_seed, obstacle_height, drop_interval, resultlogjson, train_yaml, predict_weight, user_name, ShapeListMax, BlockNumMax, art_config_filepath):
     argparser = ArgumentParser()
     argparser.add_argument('-l', '--game_level', type=int,
                            default=game_level,
@@ -19,6 +19,9 @@ def get_option(game_level, game_time, mode, random_seed, drop_interval, resultlo
     argparser.add_argument('-r', '--random_seed', type=int,
                            default=random_seed,
                            help='Specify random seed if necessary') 
+    argparser.add_argument('--obstacle_height', type=int,
+                           default=obstacle_height,
+                           help='Specify obstacle block height') 
     argparser.add_argument('-d', '--drop_interval', type=int,
                            default=drop_interval,
                            help='Specify drop interval (msec) if necessary') 
@@ -69,12 +72,14 @@ def start():
     TRAIN_YAML = "config/default.yaml"
     PREDICT_WEIGHT = "outputs/latest/best_weight.pt"
     ART_CONFIG = "default.json"
+    OBSTACLE_HEIGHT_DEF = 10
 
     ## update value if args are given
     args = get_option(GAME_LEVEL,
                       GAME_TIME,
                       IS_MODE,
                       INPUT_RANDOM_SEED,
+                      OBSTACLE_HEIGHT_DEF,
                       INPUT_DROP_INTERVAL,
                       RESULT_LOG_JSON,
                       TRAIN_YAML,
@@ -107,25 +112,27 @@ def start():
         PREDICT_WEIGHT = args.predict_weight
     if len(args.art_config_filepath) != 0:
         ART_CONFIG = args.art_config_filepath
-
+    if 0 <= args.obstacle_height and args.obstacle_height < 22:
+        OBSTACLE_HEIGHT = args.obstacle_height
     ## set field parameter for level 1
     RANDOM_SEED = 0            # random seed for field
-    OBSTACLE_HEIGHT = 0        # obstacle height (blocks)
     OBSTACLE_PROBABILITY = 0   # obstacle probability (percent)
 
     ## update field parameter level
     if GAME_LEVEL == 0:   # level0
         GAME_TIME = -1
+        OBSTACLE_HEIGHT = 0        # obstacle height (blocks)
     elif GAME_LEVEL == 1: # level1
         RANDOM_SEED = 0
         BLOCK_NUM_MAX = 180
+        OBSTACLE_HEIGHT = 0        # obstacle height (blocks)
     elif GAME_LEVEL == 2: # level2
         RANDOM_SEED = -1
         BLOCK_NUM_MAX = 180
+        OBSTACLE_HEIGHT = 0        # obstacle height (blocks)
     elif GAME_LEVEL == 3 or GAME_LEVEL == 4: # level3 or level4
         RANDOM_SEED = -1
         BLOCK_NUM_MAX = 180
-        OBSTACLE_HEIGHT = 10
         OBSTACLE_PROBABILITY = 40
         if GAME_LEVEL == 4:
             BLOCK_NUM_MAX = -1

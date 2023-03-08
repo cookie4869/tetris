@@ -2168,8 +2168,8 @@ class Block_Controller(object):
             ## 消したライン数を保存
             index_list_to_lines_cleared[tuple(new_index_list)] = lines_cleared
 
-        ## 最初の起動の場合ログ出力
-        if self.time_disp and next_order == 1 and time_out:
+        ## 最初の起動の場合　Timeout でログ出力
+        if next_order == 1 and time_out: #and self.time_disp
             print("Timeout: ", len(index_list_to_q))
 
         ## 次の予測一覧とQ値, および最初の action, state を返す

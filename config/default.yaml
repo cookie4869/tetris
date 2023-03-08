@@ -19,12 +19,14 @@ common:
   #ft_weight: outputs/2022-09-03-11-40-46/trained_model/tetris_epoch754_score17400.pt
   #ft_weight: outputs/2022-09-09-08-54-47/trained_model/tetris_epoch2356_score26800.pt
 
+  ## Level 2 4回先読み最適化 強い,左はし空け 9段0.8, 高さ緩和 9 from 2022-08-31-08-05-53 1701 epsilon 0.1%
+  ft_weight: outputs/2023-02-22-08-22-32/trained_model/tetris_epoch8572_score21400.pt
   ## Level 2 左端積み上げ制限
   #ft_weight: outputs/2023-01-24-23-09-09/trained_model/tetris_epoch26_score4300.pt
   ## Lv2 4回先読み最適化 強い,左はし空け 6段0.8, 高さ緩和 7
   #ft_weight: outputs/2022-08-31-08-05-53/trained_model/tetris_epoch1701_score189000.pt
   ## Lv2 1回先読み最適化
-  ft_weight: outputs/2022-08-17-20-41-25/trained_model/tetris_epoch949_score203900.pt # 以前の学習結果を利用する場合のファイル 
+  #ft_weight: outputs/2022-08-17-20-41-25/trained_model/tetris_epoch949_score203900.pt # 以前の学習結果を利用する場合のファイル 
 
   #### 推論用Weight
   #Lv3 穴掘り
@@ -64,11 +66,13 @@ common:
   #predict_weight2: outputs/2022-09-11-12-11-16/trained_model/tetris_epoch2408_score24800.pt
   ## Lv3 積み上げ (OBSTACLE_HEIGHT = 5で学習)
   #predict_weight2: outputs/2022-09-09-08-54-47/trained_model/tetris_epoch2356_score26800.pt
+  ## Lv3 積み上げ
+  predict_weight2: outputs/2023-03-07-23-04-06/trained_model/tetris_epoch9876_score19600.pt
 
   ## Level 2 左端積み上げ制限
   #predict_weight2: outputs/2023-01-24-23-09-09/trained_model/tetris_epoch26_score4300.pt
   ## Level 2 4回先読み最適化 強い,左はし空け 6段0.8, 高さ緩和 7
-  predict_weight2: outputs/2022-08-31-08-05-53/trained_model/tetris_epoch1701_score189000.pt
+  #predict_weight2: outputs/2022-08-31-08-05-53/trained_model/tetris_epoch1701_score189000.pt
 
   #### model 切り替えポイント (最も高い穴の位置が下記より低いとき)
   predict_weight2_enable_index: 5
@@ -136,7 +140,7 @@ train:
   hold_flag: True # HOLD 有効化 (False: 無効, True: 有効)
 
   predict_next_num: 4 # 次のテトリミノ予測数 (0: 無効) #DQN限定
-  predict_next_steps: 5 #  1つの手番で候補手をいくつ探すか #DQN限定
+  predict_next_steps: 4 #  1つの手番で候補手をいくつ探すか #DQN限定
   predict_next_num_train: 1 # 次のテトリミノ予測有効化 (学習時) (0: 無効) #DQN限定
   predict_next_steps_train: 1 #  1つの手番で候補手をいくつ探すか (学習時) #DQN限定
 tetris:
