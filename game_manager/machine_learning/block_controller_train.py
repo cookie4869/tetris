@@ -1863,11 +1863,11 @@ class Block_Controller(object):
 
 
                 ### 下記場合 HOLD と入れ替え
-                ## 最大消去が 2 lines かつ 高さ 10 より大きい もしくは
-                ## 最大消去が 3 lines かつ 高さ 5より大きい もしくは
+                ## 最大消去が 2 lines かつ 高さ 15 より大きい もしくは
+                ## 最大消去が 3 lines かつ 高さ 10 より大きい もしくは
                 ## 最大消去が 4 lines,
-                if index_to_lines_cleared_chance[max_index_lines_cleared_chance] == 2 and max_row > 10 \
-                    or index_to_lines_cleared_chance[max_index_lines_cleared_chance] == 3 and max_row > 6 \
+                if index_to_lines_cleared_chance[max_index_lines_cleared_chance] == 2 and max_row > 15 \
+                    or index_to_lines_cleared_chance[max_index_lines_cleared_chance] == 3 and max_row > 10 \
                     or index_to_lines_cleared_chance[max_index_lines_cleared_chance] == 4 :
 
                     ## Debug

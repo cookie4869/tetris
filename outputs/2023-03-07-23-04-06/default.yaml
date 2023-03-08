@@ -33,7 +33,7 @@ common:
   ## 不安定 だが高速
   #predict_weight: outputs/2022-09-10-18-34-53/trained_model/tetris_epoch3277_score16700.pt
   ## 高速
-  predict_weight: outputs/2022-09-10-18-34-53/trained_model/tetris_epoch2442_score17100.pt
+  #predict_weight: outputs/2022-09-10-18-34-53/trained_model/tetris_epoch2442_score17100.pt
   ##
   #predict_weight: outputs/2022-09-10-11-12-34/trained_model/tetris_epoch110_score26900.pt
   ##
@@ -45,7 +45,7 @@ common:
 
 
   ## Level 2 4回先読み最適化 強い,左はし空け 9段0.8, 高さ緩和 9 from 2022-08-31-08-05-53 1701 epsilon 0.1%
-  #predict_weight: outputs/2023-02-22-08-22-32/trained_model/tetris_epoch8572_score21400.pt
+  predict_weight: outputs/2023-02-22-08-22-32/trained_model/tetris_epoch8572_score21400.pt
   ## Level 2 4回先読み最適化 強い,左はし空け 9段0.8, 高さ緩和 9
   #predict_weight: outputs/2023-02-21-07-10-03/trained_model/tetris_epoch8500_score2600.pt
   ## Level 2 左端積み上げ制限
@@ -60,10 +60,8 @@ common:
   #predict_weight: outputs/2022-08-16-23-07-28/trained_model/tetris_epoch192_score176400.pt
 
   #### 第2model 有効
-  weight2_available: True
+  weight2_available: False
   #### 第2model
-  ## Lv3 積み上げ (OBSTACLE_HEIGHT = 5で学習)
-  predict_weight2: outputs/2023-03-07-23-04-06/trained_model/tetris_epoch9876_score19600.pt
   ## Lv3 積み上げ (OBSTACLE_HEIGHT = 5で学習) 左端高めNG
   #predict_weight2: outputs/2022-09-11-12-11-16/trained_model/tetris_epoch2408_score24800.pt
   ## Lv3 積み上げ (OBSTACLE_HEIGHT = 5で学習)
@@ -72,7 +70,7 @@ common:
   ## Level 2 左端積み上げ制限
   #predict_weight2: outputs/2023-01-24-23-09-09/trained_model/tetris_epoch26_score4300.pt
   ## Level 2 4回先読み最適化 強い,左はし空け 6段0.8, 高さ緩和 7
-  #predict_weight2: outputs/2022-08-31-08-05-53/trained_model/tetris_epoch1701_score189000.pt
+  predict_weight2: outputs/2022-08-31-08-05-53/trained_model/tetris_epoch1701_score189000.pt
 
   #### model 切り替えポイント (最も高い穴の位置が下記より低いとき)
   predict_weight2_enable_index: 5
