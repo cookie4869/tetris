@@ -950,9 +950,9 @@ class Block_Controller(object):
             # そろっている段ごとに報酬
             if self.get_line_right_fill(reshape_board, sum_, i):
                 reward +=1
-            ## 1段目は2倍
-            if i==1:
-                reward +=5
+                ## 1段目は2倍
+                if i==1:
+                    reward +=5
 
         return reward
 
