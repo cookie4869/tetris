@@ -30,8 +30,6 @@ common:
 
   #### 推論用Weight
   #Lv3 穴掘り
-  ##
-  #predict_weight: outputs\2023-03-08-22-48-24\trained_model\tetris_epoch9797_score13600.pt
   ## 不安定 だが高速
   #predict_weight: outputs/2022-09-10-18-34-53/trained_model/tetris_epoch3277_score16700.pt
   ## 高速
@@ -120,7 +118,7 @@ train:
     - 500 #0 #1block
     - 1000 #2block
     - 2000 #3block
-    - 10000 #4block
+    - 3000 #4block
     - -10000 #game over
   height_line_reward: 3 #低いところの消去ほど有効とする設定(10000 くらいでほぼ無効 大きい値ほど報酬小さい)
   reward_weight: # 形状報酬の配分
@@ -130,7 +128,7 @@ train:
   bumpiness_left_side_relax: 4 # 左端のでこぼこだけどこまで許容するか
   max_height_relax: 4 # 高さをどこまで許容するか(左記より大きい)
 
-  tetris_fill_reward: 0.8 # 左端以外を埋める報酬率 #DQN限定 #DQN限定
+  tetris_fill_reward: 0.001 # 左端以外を埋める報酬率 #DQN限定 #DQN限定
   tetris_fill_height: 9 # 左端以外を埋める報酬有効化上限高さ #DQN限定
   left_side_height_penalty: 0.005 # 左端を tetris_fill_height 以上積んだ時の penalty #DQN限定
 
