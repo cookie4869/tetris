@@ -59,6 +59,7 @@ def get_option(game_time, mode, drop_interval, random_seed, obstacle_height, obs
     argparser.add_argument('--art_config_filepath', type=str,
                            default=art_config_filepath,
                            help='art_config file path')
+
     return argparser.parse_args()
 
 #####################################################################
